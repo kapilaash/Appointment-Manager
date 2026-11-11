@@ -1,23 +1,16 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-
-const apiProxyTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://127.0.0.1:8001';
+import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    port: 5173,
-    strictPort: true,
-    proxy: Object.fromEntries(
-      ['/api', '/health', '/docs', '/openapi.json', '/redoc'].map((path) => [path, {
-        target: apiProxyTarget,
-        changeOrigin: true,
-      }] as const),
-    ),
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
   },
-  test: {
-    environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
   },
 });

@@ -1,127 +1,108 @@
-name: chess-academy
+version: '3.8'
 
 services:
-  frontend:
-    build:
-      context: ./frontend
-      target: development
+  postgres:
+    image: postgres:16-alpine
+    container_name: chess_academy_postgres
+    restart: unless-stopped
     environment:
-      VITE_API_BASE_URL: /api/v1
-      VITE_API_PROXY_TARGET: http://backend:8000
+      POSTGRES_USER: ${POSTGRES_USER:-chess_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chess_secure_pass_2025}
+      POSTGRES_DB: ${POSTGRES_DB:-chess_academy}
     ports:
-      - "5173:5173"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
-    depends_on:
-      backend:
-        condition: service_healthy
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-      interval: 15s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chess_admin} -d ${POSTGRES_DB:-chess_academy}"]
+      interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 20s
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: chess_academy_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:v1.18
+    container_name: chess_academy_mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_HTTP_PORT:-8025}:8025"
 
   backend:
     build:
       context: ./backend
-    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
-    env_file:
-      - path: .env
-        required: false
+      dockerfile: Dockerfile
+    container_name: chess_academy_backend
+    restart: unless-stopped
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://chess_academy:local_development_only@postgres:5432/chess_academy}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-chess_admin}:${POSTGRES_PASSWORD:-chess_secure_pass_2025}@postgres:5432/${POSTGRES_DB:-chess_academy}
+      - REDIS_URL=redis://redis:6379/0
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
+      - FRONTEND_URL=http://localhost:5173
+      - SECRET_KEY=${SECRET_KEY:-insecure_dev_secret_key_change_in_production_32bytes_min}
+    ports:
+      - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=2)"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
+    volumes:
+      - ./backend:/app
 
   worker:
     build:
       context: ./backend
-    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=INFO"]
-    env_file:
-      - path: .env
-        required: false
+      dockerfile: Dockerfile
+    container_name: chess_academy_worker
+    restart: unless-stopped
+    command: python -m arq app.workers.main.WorkerSettings
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://chess_academy:local_development_only@postgres:5432/chess_academy}
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-chess_admin}:${POSTGRES_PASSWORD:-chess_secure_pass_2025}@postgres:5432/${POSTGRES_DB:-chess_academy}
+      - REDIS_URL=redis://redis:6379/0
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
+      - SECRET_KEY=${SECRET_KEY:-insecure_dev_secret_key_change_in_production_32bytes_min}
     depends_on:
-      backend:
+      postgres:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "celery", "-A", "app.workers.celery_app:celery_app", "inspect", "ping", "--timeout=5"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  scheduler:
-    build:
-      context: ./backend
-    command: ["celery", "-A", "app.workers.celery_app:celery_app", "beat", "--loglevel=INFO", "--pidfile=/tmp/celerybeat.pid"]
-    env_file:
-      - path: .env
-        required: false
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://chess_academy:local_development_only@postgres:5432/chess_academy}
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
-    depends_on:
-      backend:
+      redis:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import os; os.kill(int(open('/tmp/celerybeat.pid').read()), 0)"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-
-  postgres:
-    image: postgres:17.4-alpine
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-chess_academy}
-      POSTGRES_USER: ${POSTGRES_USER:-chess_academy}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_development_only}
-    ports:
-      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - ./backend:/app
 
-  redis:
-    image: redis:7.4.2-alpine
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: chess_academy_frontend
+    restart: unless-stopped
     ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  mailpit:
-    image: axllent/mailpit:v1.24.1
-    ports:
-      - "1025:1025"
-      - "8025:8025"
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8025/api/v1/info"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
 
 volumes:
   postgres_data:
-  frontend_node_modules:
+  redis_data:

@@ -1,19 +1,12 @@
-FROM node:22.14.0-alpine AS development
+FROM node:20-alpine
+
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --prefer-online --no-audit --no-fund
+
+COPY package.json ./
+RUN npm install
+
 COPY . .
+
 EXPOSE 5173
-CMD ["npm", "run", "dev"]
 
-FROM node:22.14.0-alpine AS build
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --prefer-online --no-audit --no-fund
-COPY . .
-RUN npm run build
-
-FROM nginx:1.27.4-alpine AS production
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+CMD ["npm", "run", "dev", "--", "--host"]
