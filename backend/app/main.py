@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import structlog
+from app.auth.routes import router as auth_router
 from app.core.config import settings
 from app.core.logging import setup_logging
 
@@ -25,7 +26,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS configuration for secure cookie and API communication
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -34,6 +34,9 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-CSRF-Token"],
 )
+
+# Register API v1 modules
+app.include_router(auth_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["System"])

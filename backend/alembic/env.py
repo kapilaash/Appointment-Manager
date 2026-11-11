@@ -6,6 +6,8 @@ from sqlalchemy import pool
 from alembic import context
 from app.core.config import settings
 from app.db.base import Base
+# Import models so Alembic detects all tables
+import app.users.models  # noqa: F401
 
 config = context.config
 

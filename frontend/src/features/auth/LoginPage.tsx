@@ -1,50 +1,102 @@
-import { useState, type FormEvent } from 'react';
-import { CalendarDays, Crown } from 'lucide-react';
-import { useCsrfQuery, useLoginMutation, useMeQuery, useRequestPasswordResetMutation } from './api';
-import { formatLoginError } from './formatLoginError';
-import { Button } from '../../components/ui/Button';
+import React, { useState } from 'react';
+import { useLoginMutation } from './authApi';
+import { Lock, Mail, ShieldAlert } from 'lucide-react';
 
-export function LoginPage() {
-  const { refetch } = useMeQuery();
-  const csrf = useCsrfQuery();
-  const [login, result] = useLoginMutation();
-  const [requestReset, resetResult] = useRequestPasswordResetMutation();
-  const [showReset, setShowReset] = useState(false);
+export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [login, { isLoading, error }] = useLoginMutation();
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (showReset) {
-      try { await requestReset({ email }).unwrap(); } catch { /* Keep account existence private. */ }
-      return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await login({ email, password }).unwrap();
+    } catch {
+      // RTK Query tracks the error in state
     }
-    try { await login({ email, password }).unwrap(); await refetch(); } catch { /* API response shown below */ }
-  }
+  };
 
-  const error = formatLoginError(result.error);
+  const errorMessage =
+    error && 'data' in error
+      ? (error.data as { detail?: string })?.detail || 'Login failed. Please check your credentials.'
+      : null;
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1.05fr_.95fr]">
-      <aside className="relative hidden overflow-hidden bg-slate-950 p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute -right-32 -top-24 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl" />
-        <div className="relative flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-indigo-500"><Crown size={21} /></span><span className="font-semibold">Thirumal Chess Academy</span></div>
-        <div className="relative max-w-xl"><p className="text-sm font-semibold uppercase tracking-[.2em] text-indigo-300">Make every first move count</p><h1 className="mt-5 text-5xl font-semibold leading-tight tracking-tight">A thoughtful start to a student’s chess journey.</h1><p className="mt-6 max-w-md text-lg leading-8 text-slate-300">Coordinate instructors, find a time that works, and give every new family a warm welcome.</p></div>
-        <p className="relative text-sm text-slate-400">Scheduling workspace · Secure staff access</p>
-      </aside>
-      <main className="flex items-center justify-center px-6 py-12">
-        <form onSubmit={submit} className="w-full max-w-md">
-          <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700 lg:hidden"><CalendarDays /></div>
-          <p className="text-sm font-semibold text-indigo-700">Staff workspace</p><h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Welcome back</h2><p className="mt-2 text-slate-500">Sign in to manage demo classes and instructor schedules.</p>
-          <label className="mt-8 block text-sm font-medium text-slate-700">Email address<input autoComplete="username" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="mt-2 w-full rounded-lg border border-slate-300 px-3.5 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" /></label>
-          {!showReset && <label className="mt-5 block text-sm font-medium text-slate-700">Password<input autoComplete="current-password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="mt-2 w-full rounded-lg border border-slate-300 px-3.5 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" /></label>}
-          {showReset && <p className="mt-5 rounded-lg bg-indigo-50 p-3 text-sm text-indigo-900">Enter your email address. If the account exists, password reset instructions will be sent.</p>}
-          {result.isError && <p role="alert" className="mt-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
-          {resetResult.isSuccess && <p role="status" className="mt-4 text-sm text-emerald-700">If the account exists, reset instructions will be sent.</p>}
-          {showReset ? <div className="mt-7 flex gap-3"><Button type="button" variant="secondary" onClick={() => setShowReset(false)}>Back</Button><Button disabled={resetResult.isLoading || !csrf.isSuccess}>{resetResult.isLoading ? 'Sending…' : 'Send reset link'}</Button></div> : <><Button disabled={result.isLoading || !csrf.isSuccess} className="mt-7 w-full py-3">{result.isLoading ? 'Signing in…' : 'Sign in'}</Button><button type="button" onClick={() => setShowReset(true)} className="mt-4 w-full text-center text-sm font-medium text-indigo-700">Forgot your password?</button></>}
-          <p className="mt-5 text-center text-xs text-slate-400">Your session is protected with secure, server-managed sign-in.</p>
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-8 shadow-xl ring-1 ring-slate-100">
+        <div>
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-3xl shadow-inner">
+            ♞
+          </div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold tracking-tight text-slate-900">
+            Sign In
+          </h2>
+          <p className="mt-2 text-center text-sm text-slate-600">
+            Royal Chess Academy Demo Scheduling Portal
+          </p>
+        </div>
+
+        {errorMessage && (
+          <div className="flex items-center gap-2 rounded-lg bg-red-50 p-4 text-sm text-red-700 border border-red-200">
+            <ShieldAlert className="h-5 w-5 flex-shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Email Address</label>
+            <div className="relative mt-1">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <Mail className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@chessacademy.com"
+                className="block w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-3 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Password</label>
+            <div className="relative mt-1">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <Lock className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="block w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-3 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="flex w-full justify-center rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:opacity-50 transition-colors"
+          >
+            {isLoading ? 'Signing in...' : 'Sign In'}
+          </button>
         </form>
-      </main>
+
+        <div className="rounded-lg bg-slate-50 p-4 text-xs text-slate-500 border border-slate-200">
+          <p className="font-semibold text-slate-700 mb-1">Testing or First Boot?</p>
+          <p>
+            Seed the super administrator account via the backend CLI:
+          </p>
+          <code className="mt-1.5 block rounded bg-slate-200/70 p-2 font-mono text-[11px] text-slate-800 break-all select-all">
+            python -m app.cli seed-admin --email admin@chessacademy.com
+          </code>
+        </div>
+      </div>
     </div>
   );
-}
+};

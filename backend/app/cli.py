@@ -3,24 +3,7 @@ import click
 from sqlalchemy import select
 from app.db.session import AsyncSessionLocal
 from app.core.security import hash_password
-from app.db.base import Base, UUIDPrimaryKeyMixin, TimestampMixin
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import String, Boolean, Enum
-import enum
-
-
-class UserRole(str, enum.Enum):
-    ADMIN = "admin"
-    INSTRUCTOR = "instructor"
-
-
-class User(Base, UUIDPrimaryKeyMixin, TimestampMixin):
-    __tablename__ = "users"
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.INSTRUCTOR, nullable=False)
-    full_name: Mapped[str] = mapped_column(String(150), nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+from app.users.models import Instructor, User, UserRole
 
 
 @click.group()
@@ -62,6 +45,44 @@ def seed_admin(email, password, name):
             click.secho(f"Successfully configured administrator {email}", fg="green")
 
     asyncio.run(_seed())
+
+
+@cli.command()
+@click.option("--email", prompt="Instructor Email", help="Instructor's email address")
+@click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="Instructor Password")
+@click.option("--name", prompt="Display Name", help="Public instructor name")
+@click.option("--timezone", default="Asia/Kolkata", help="Timezone identifier (e.g. Asia/Kolkata, America/New_York)")
+def create_instructor(email, password, name, timezone):
+    """Create a new instructor user with linked instructor profile."""
+    async def _create():
+        async with AsyncSessionLocal() as session:
+            stmt = select(User).where(User.email == email.strip().lower())
+            result = await session.execute(stmt)
+            if result.scalar_one_or_none():
+                click.secho(f"Error: User with email {email} already exists.", fg="red")
+                return
+
+            user = User(
+                email=email.strip().lower(),
+                password_hash=hash_password(password),
+                role=UserRole.INSTRUCTOR,
+                full_name=name,
+                is_active=True
+            )
+            session.add(user)
+            await session.flush()
+
+            instructor = Instructor(
+                user_id=user.id,
+                display_name=name,
+                timezone=timezone,
+                is_available_for_booking=True
+            )
+            session.add(instructor)
+            await session.commit()
+            click.secho(f"Successfully created instructor {name} ({email}) with timezone {timezone}", fg="green")
+
+    asyncio.run(_create())
 
 
 if __name__ == "__main__":
