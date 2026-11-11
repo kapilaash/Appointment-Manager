@@ -3,7 +3,6 @@ name = "chess-academy-backend"
 version = "0.1.0"
 description = "Scheduling and Demo Class Platform for Chess Academy"
 authors = [{ name = "Principal Software Engineer" }]
-readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.111.0",
