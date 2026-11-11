@@ -48,6 +48,28 @@ def seed_admin(email, password, name):
 
 
 @cli.command()
+@click.option("--email", prompt="User Email", help="Email of the user whose password is to be reset")
+@click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="New Password")
+def reset_password(email, password):
+    """Reset the password for any existing user."""
+    async def _reset():
+        async with AsyncSessionLocal() as session:
+            stmt = select(User).where(User.email == email.strip().lower())
+            result = await session.execute(stmt)
+            user = result.scalar_one_or_none()
+
+            if not user:
+                click.secho(f"Error: User with email {email} was not found.", fg="red")
+                return
+
+            user.password_hash = hash_password(password)
+            await session.commit()
+            click.secho(f"Successfully updated password for {email}", fg="green")
+
+    asyncio.run(_reset())
+
+
+@cli.command()
 @click.option("--email", prompt="Instructor Email", help="Instructor's email address")
 @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="Instructor Password")
 @click.option("--name", prompt="Display Name", help="Public instructor name")
