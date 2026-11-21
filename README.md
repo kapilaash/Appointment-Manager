@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Thirumal Chess Academy
 
 The active application provides staff sign-in, administrator-managed coach accounts, coach profiles and individual weekly availability, date-specific exceptions, and an administrator booking flow. Admins can book a coach with student or parent contact details; a durable outbox queues notifications and keeps appointment search in Meilisearch in sync with PostgreSQL. Coaches can edit their own profile, country and IANA time zone, weekly availability, and exceptions. Studio, Classic Chess, and Black & White appearance themes and role-specific Help & guides are included. Existing bookings are preserved when schedules change.
@@ -139,3 +140,7 @@ Before production, choose a student-data retention period with the academy, veri
 ## Architecture and status
 
 See [docs/architecture.md](docs/architecture.md) for module boundaries, availability and concurrency decisions, status transitions, and known external setup. The API is versioned under `/api/v1`; health endpoints are `/health/live` and `/health/ready`.
+=======
+# Appointment-Manager
+An app to manage appointments...Simple right?
+>>>>>>> 1954b4f78a9e3b28bd4530bcfa95ec41710c77c1
