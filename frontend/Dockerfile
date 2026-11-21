@@ -31,7 +31,7 @@ ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN \
 RUN --mount=type=secret,id=sentry_auth_token,required=false \
     SENTRY_AUTH_TOKEN="$(tr -d '\r\n' < /run/secrets/sentry_auth_token 2>/dev/null || true)" npm run build
 
-FROM nginx:1.27-alpine AS production
+FROM nginx:1.29-alpine AS production
 
 COPY --from=frontend-build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
