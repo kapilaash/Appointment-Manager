@@ -1,0 +1,200 @@
+groups:
+  - name: chess-academy-app
+    rules:
+      - alert: BackendMetricsUnavailable
+        expr: up{job="backend-api"} == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: Backend metrics endpoint is unavailable
+          description: Prometheus cannot scrape the API metrics endpoint for at least two minutes.
+
+      - alert: BackgroundWorkerMetricsUnavailable
+        expr: up{job="background-worker"} == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: Background worker metrics are unavailable
+          description: Prometheus cannot scrape the ARQ worker metrics endpoint.
+
+      - alert: BackgroundWorkerFailureObserved
+        expr: increase(worker_job_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: A background worker task failed
+          description: "A {{ $labels.task }} task failed. Check worker logs and outbox status."
+
+      - alert: WorkerSearchDependencyUnavailable
+        expr: worker_search_dependency_available == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Background worker cannot update the search index
+          description: The worker cannot reach or synchronize its search dependency.
+
+      - alert: WorkerScheduledCycleStale
+        expr: (time() - worker_job_last_success_timestamp_seconds{task="notifications"} > 90) or absent(worker_job_last_success_timestamp_seconds{task="notifications"})
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: Notification worker has stopped completing scheduled cycles
+          description: The notification worker has not completed a scheduled cycle recently. Check worker logs, Redis, and database connectivity.
+
+      - alert: WorkerSearchCycleStale
+        expr: (time() - worker_job_last_success_timestamp_seconds{task="search"} > 60) or absent(worker_job_last_success_timestamp_seconds{task="search"})
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Search worker has stopped completing scheduled cycles
+          description: The search worker has not completed a healthy synchronization cycle recently.
+
+      - alert: OutboxEventBacklogOld
+        expr: worker_outbox_events{status=~"pending|processing"} > 0 and on(queue) (time() - worker_outbox_oldest_unprocessed_timestamp_seconds > 300)
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Outbox events are waiting too long
+          description: "The oldest {{ $labels.queue }} event has been pending or processing for over five minutes."
+
+      - alert: OutboxEventsPermanentlyFailed
+        expr: worker_outbox_events{status="failed"} > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Outbox events reached the retry limit
+          description: "The {{ $labels.queue }} queue has permanently failed events that need review."
+
+      - alert: ExternalUptimeHeartbeatFailed
+        expr: app_external_uptime_heartbeat_enabled == 1 and app_external_uptime_heartbeat_success == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: API external uptime heartbeat could not be delivered
+          description: Check outbound network access and the configured external heartbeat URL.
+
+      - alert: LokiUnavailable
+        expr: up{job="loki"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Central log storage is unavailable
+          description: Grafana Loki cannot be scraped; recent container logs may not be searchable.
+
+      - alert: GrafanaAlloyUnavailable
+        expr: up{job="alloy"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Log collection is unavailable
+          description: Grafana Alloy cannot be scraped; container logs may not be reaching Loki.
+
+      - alert: LogPipelineDroppingEntries
+        expr: increase(loki_write_dropped_entries_total{component_id="loki.write.local"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: The log pipeline is dropping container logs
+          description: "Alloy dropped log entries (reason: {{ $labels.reason }}). Check Alloy and Loki logs."
+
+      - alert: ObservabilityComponentUnavailable
+        expr: observability_component_healthy == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: A monitored application or observability component is unhealthy
+          description: "The observability heartbeat check failed for {{ $labels.component }}."
+
+      - alert: ObservabilityExternalHeartbeatFailed
+        expr: observability_external_uptime_heartbeat_success == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: External observability heartbeat delivery is failing
+          description: Check outbound network access and the configured monitoring heartbeat URL.
+
+      - alert: ApplicationEndpointUnavailable
+        expr: probe_success{job="app-endpoints"} == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: An application health probe is failing
+          description: "The probe for {{ $labels.instance }} has failed for at least two minutes."
+
+      - alert: ApplicationHttp5xxRateHigh
+        expr: sum(rate(app_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(app_http_requests_total[5m])), 0.01) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: API server error rate is above five percent
+          description: More than five percent of API requests returned a server error during the last five minutes.
+
+      - alert: ApiServerErrorObserved
+        expr: sum(increase(app_http_requests_total{status=~"5.."}[5m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: An API request returned a server error
+          description: "At least one API request returned HTTP 5xx in the last five minutes. Check request-ID logs for route and trace details."
+
+      - alert: ApplicationP95LatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(app_http_request_duration_seconds_bucket[5m]))) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: API 95th percentile latency is above two seconds
+          description: The API p95 response time has exceeded two seconds for ten minutes.
+
+      - alert: PrometheusConfigurationReloadFailed
+        expr: prometheus_config_last_reload_successful == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Prometheus rejected a configuration reload
+          description: Prometheus is still using its previous valid configuration.
+
+      - alert: PrometheusRuleEvaluationFailed
+        expr: increase(prometheus_rule_evaluation_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Prometheus failed to evaluate an alert rule
+          description: "A rule evaluation failed on {{ $labels.instance }}. Check Prometheus logs and rule configuration."
+
+      - alert: MetaMonitoringTargetUnavailable
+        expr: up{job=~"meta-prometheus|meta-alertmanager"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: A meta-monitoring service is unavailable
+          description: "The {{ $labels.job }} target {{ $labels.instance }} is down."
+
+      - alert: AlertNotificationsFailing
+        expr: increase(alertmanager_notifications_failed_total{job="meta-alertmanager"}[10m]) > 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: Alertmanager notification delivery is failing
+          description: Check SMTP credentials and connectivity from the monitoring network.

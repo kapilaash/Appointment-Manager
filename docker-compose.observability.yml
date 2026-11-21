@@ -1,0 +1,221 @@
+services:
+  observability-heartbeat:
+    build:
+      context: ./backend
+      dockerfile: ../ops/observability/heartbeat/Dockerfile
+    profiles: ["observability"]
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: INFO
+      UPTIME_OBSERVABILITY_HEARTBEAT_URL: ${UPTIME_OBSERVABILITY_HEARTBEAT_URL:-}
+      UPTIME_HEARTBEAT_INTERVAL_SECONDS: ${UPTIME_HEARTBEAT_INTERVAL_SECONDS:-60}
+      FRONTEND_INTERNAL_HEALTH_URL: ${FRONTEND_INTERNAL_HEALTH_URL:-http://frontend:5173/}
+    expose:
+      - "9100"
+    depends_on:
+      backend:
+        condition: service_started
+      worker:
+        condition: service_started
+      frontend:
+        condition: service_started
+      meilisearch:
+        condition: service_started
+      prometheus:
+        condition: service_started
+      meta-prometheus:
+        condition: service_started
+      alertmanager:
+        condition: service_started
+      meta-alertmanager:
+        condition: service_started
+      grafana:
+        condition: service_started
+      loki:
+        condition: service_started
+      alloy:
+        condition: service_started
+      blackbox-exporter:
+        condition: service_started
+
+  alertmanager-config:
+    profiles: ["observability"]
+    build:
+      context: ./ops/observability/alertmanager-config-renderer
+    restart: "no"
+    environment:
+      ALERT_SMTP_HOST: ${ALERT_SMTP_HOST:-mailpit}
+      ALERT_SMTP_PORT: ${ALERT_SMTP_PORT:-1025}
+      ALERT_SMTP_FROM: ${ALERT_SMTP_FROM:-no-reply@chessacademy.com}
+      ALERT_SMTP_USERNAME: ${ALERT_SMTP_USERNAME:-}
+      ALERT_SMTP_PASSWORD: ${ALERT_SMTP_PASSWORD:-}
+      ALERT_SMTP_REQUIRE_TLS: ${ALERT_SMTP_REQUIRE_TLS:-false}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-alerts@example.test}
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+    volumes:
+      - alertmanager_config:/run/alertmanager-config
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.29.1
+    profiles: ["observability"]
+    restart: unless-stopped
+    command: ["--config.file=/etc/blackbox_exporter/blackbox.yml"]
+    volumes:
+      - ./ops/observability/blackbox.yml:/etc/blackbox_exporter/blackbox.yml:ro
+
+  docker-socket-proxy:
+    image: ghcr.io/tecnativa/docker-socket-proxy:3.4
+    profiles: ["observability"]
+    restart: unless-stopped
+    environment:
+      CONTAINERS: "1"
+      EVENTS: "1"
+      NETWORKS: "1"
+      POST: "0"
+    expose:
+      - "2375"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - log-collection
+
+  loki:
+    image: grafana/loki:3.7.10
+    profiles: ["observability"]
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki.yml"]
+    expose:
+      - "3100"
+    volumes:
+      - ./ops/observability/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+
+  alertmanager:
+    image: prom/alertmanager:v0.35.0
+    profiles: ["observability"]
+    restart: unless-stopped
+    user: "65534:65534"
+    command:
+      - --config.file=/run/alertmanager-config/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.listen-address=0.0.0.0:9093
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - alertmanager_config:/run/alertmanager-config:ro
+      - alertmanager_data:/alertmanager
+    depends_on:
+      alertmanager-config:
+        condition: service_completed_successfully
+
+  meta-alertmanager:
+    image: prom/alertmanager:v0.35.0
+    profiles: ["observability"]
+    restart: unless-stopped
+    user: "65534:65534"
+    command:
+      - --config.file=/run/alertmanager-config/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.listen-address=0.0.0.0:9093
+    ports:
+      - "127.0.0.1:9094:9093"
+    volumes:
+      - alertmanager_config:/run/alertmanager-config:ro
+      - meta_alertmanager_data:/alertmanager
+    depends_on:
+      alertmanager-config:
+        condition: service_completed_successfully
+
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    profiles: ["observability"]
+    restart: unless-stopped
+    user: "65534:65534"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+      - --web.listen-address=0.0.0.0:9090
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./ops/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./ops/observability/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+
+  meta-prometheus:
+    image: prom/prometheus:v3.16.0
+    profiles: ["observability"]
+    restart: unless-stopped
+    user: "65534:65534"
+    command:
+      - --config.file=/etc/prometheus/meta-prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+      - --web.listen-address=0.0.0.0:9090
+    ports:
+      - "127.0.0.1:9091:9090"
+    volumes:
+      - ./ops/observability/meta-prometheus.yml:/etc/prometheus/meta-prometheus.yml:ro
+      - ./ops/observability/rules:/etc/prometheus/rules:ro
+      - meta_prometheus_data:/prometheus
+
+  alloy:
+    image: grafana/alloy:v1.21.3
+    profiles: ["observability"]
+    restart: unless-stopped
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    expose:
+      - "12345"
+    volumes:
+      - ./ops/observability/alloy.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy/data
+    networks:
+      - default
+      - log-collection
+    depends_on:
+      docker-socket-proxy:
+        condition: service_started
+      loki:
+        condition: service_started
+
+  grafana:
+    image: grafana/grafana:13.3.0
+    profiles: ["observability"]
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-academy-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_HTTP_ADDR: 0.0.0.0
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_UPDATES_CHECK_FOR_UPDATES: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./ops/observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./ops/observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./ops/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+volumes:
+  alertmanager_config:
+  alertmanager_data:
+  meta_alertmanager_data:
+  prometheus_data:
+  meta_prometheus_data:
+  grafana_data:
+  loki_data:
+  alloy_data:
+
+networks:
+  log-collection:
+    internal: true

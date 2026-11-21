@@ -5,22 +5,27 @@ Revises:
 Create Date: 2025-01-01 00:00:00.000000
 
 """
-from typing import Sequence, Union
-from alembic import op
+from collections.abc import Sequence
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
+
 revision: str = '0001'
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
     op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";')
     op.execute('CREATE EXTENSION IF NOT EXISTS "btree_gist";')
 
-    user_role_enum = postgresql.ENUM('admin', 'instructor', name='user_role')
+    # A prior failed/legacy bootstrap may have left the enum behind without
+    # creating the tables. Reuse it if present and prevent create_table from
+    # issuing a second CREATE TYPE.
+    user_role_enum = postgresql.ENUM('admin', 'instructor', name='user_role', create_type=False)
     user_role_enum.create(op.get_bind(), checkfirst=True)
 
     op.create_table(
@@ -28,7 +33,7 @@ def upgrade() -> None:
         sa.Column('id', sa.UUID(), nullable=False),
         sa.Column('email', sa.String(length=255), nullable=False),
         sa.Column('password_hash', sa.String(length=255), nullable=False),
-        sa.Column('role', sa.Enum('admin', 'instructor', name='user_role'), nullable=False),
+        sa.Column('role', user_role_enum, nullable=False),
         sa.Column('full_name', sa.String(length=150), nullable=False),
         sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
@@ -60,4 +65,3 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_users_id'), table_name='users')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
-    op.execute('DROP TYPE IF EXISTS user_role;')

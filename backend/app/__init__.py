@@ -1,0 +1,1 @@
+"""Chess academy application package."""

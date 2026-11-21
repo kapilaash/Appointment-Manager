@@ -1,8 +1,10 @@
 import uuid
+
 from fastapi import Cookie, Depends, Header, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.auth.session_store import SessionStore
 from app.core.config import settings
 from app.db.session import get_db_session
@@ -23,9 +25,10 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired or invalid")
 
     # Verify CSRF for state-mutating requests
-    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
-        if not x_csrf_token or not await SessionStore.validate_csrf(chess_session_id, x_csrf_token):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token")
+    if request.method in ("POST", "PUT", "PATCH", "DELETE") and (
+        not x_csrf_token or not await SessionStore.validate_csrf(chess_session_id, x_csrf_token)
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token")
 
     user_id = uuid.UUID(session_data["user_id"])
     stmt = (

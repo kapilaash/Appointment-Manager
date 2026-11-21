@@ -1,0 +1,191 @@
+groups:
+  - name: chess-academy-meta-monitoring
+    rules:
+      - alert: PrimaryPrometheusUnavailable
+        expr: up{job="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: Primary Prometheus is unavailable
+          description: Meta-Prometheus cannot scrape the primary monitoring server.
+
+      - alert: MetaPrometheusUnavailable
+        expr: up{job="meta-prometheus"} == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: Meta-Prometheus is unavailable
+          description: Primary Prometheus cannot scrape the independent monitoring server.
+
+      - alert: AlertmanagerUnavailable
+        expr: up{job="alertmanager"} == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: An Alertmanager instance is unavailable
+          description: "At least one notification router is unavailable: {{ $labels.job }}."
+
+      - alert: PrimaryAlertNotificationsFailing
+        expr: increase(alertmanager_notifications_failed_total{job="alertmanager"}[10m]) > 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: Primary Alertmanager could not deliver a notification
+          description: Meta-Prometheus observed failed notifications from the primary Alertmanager. Check SMTP connectivity and credentials.
+
+      - alert: AlertmanagerConfigurationReloadFailed
+        expr: alertmanager_config_last_reload_successful == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: An Alertmanager configuration reload failed
+          description: "The {{ $labels.job }} Alertmanager is still using its previous valid configuration."
+
+      - alert: GrafanaUnavailable
+        expr: up{job="grafana"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Grafana dashboard service is unavailable
+          description: Both Prometheus servers monitor the Grafana endpoint.
+
+      - alert: BlackboxExporterUnavailable
+        expr: up{job="blackbox-exporter"} == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: Blackbox exporter is unavailable
+          description: HTTP probes cannot run until the exporter recovers.
+
+      - alert: MonitoringTargetScrapeFailing
+        expr: up{job=~"prometheus|alertmanager|grafana|blackbox-exporter|background-worker|loki|alloy|observability-heartbeat"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: A monitoring target has stopped responding
+          description: "The {{ $labels.job }} target {{ $labels.instance }} is down."
+
+      - alert: ExternalUptimeHeartbeatFailed
+        expr: app_external_uptime_heartbeat_enabled == 1 and app_external_uptime_heartbeat_success == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: API external uptime heartbeat could not be delivered
+          description: Check outbound network access and the configured external heartbeat URL.
+
+      - alert: WorkerExternalUptimeHeartbeatFailed
+        expr: worker_external_uptime_heartbeat_enabled == 1 and worker_external_uptime_heartbeat_success == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Worker external uptime heartbeat could not be delivered
+          description: Check outbound network access and the configured external heartbeat URL.
+
+      - alert: LokiUnavailable
+        expr: up{job="loki"} == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: Meta-Prometheus cannot reach the log store
+          description: Loki is unavailable to both the application and meta-monitoring stack.
+
+      - alert: GrafanaAlloyUnavailable
+        expr: up{job="alloy"} == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: Meta-Prometheus cannot reach the log collector
+          description: Grafana Alloy is unavailable to both Prometheus instances.
+
+      - alert: MetaLogPipelineDroppingEntries
+        expr: increase(loki_write_dropped_entries_total{component_id="loki.write.local"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: The log pipeline is dropping container logs
+          description: "Meta-Prometheus observed Alloy dropping entries (reason: {{ $labels.reason }})."
+
+      - alert: ObservabilityHeartbeatUnavailable
+        expr: up{job="observability-heartbeat"} == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: The observability heartbeat checker is unavailable
+          description: Meta-Prometheus cannot scrape its independent health-check sidecar.
+
+      - alert: ObservabilityComponentUnavailable
+        expr: observability_component_healthy == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: A monitored application or observability component is unhealthy
+          description: "The heartbeat sidecar reports {{ $labels.component }} as unhealthy."
+
+      - alert: ObservabilityExternalHeartbeatFailed
+        expr: observability_external_uptime_heartbeat_success == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: External observability heartbeat delivery is failing
+          description: Check outbound network access and the configured monitoring heartbeat URL.
+
+      - alert: BackgroundWorkerMetricsUnavailable
+        expr: up{job="background-worker"} == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: Meta-Prometheus cannot reach the background worker
+          description: The independent worker metrics scrape has failed for at least one minute.
+
+      - alert: BackgroundWorkerFailureObserved
+        expr: increase(worker_job_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Meta-Prometheus observed a background worker failure
+          description: "A {{ $labels.task }} task failed. Check worker logs and outbox status."
+
+      - alert: WorkerSearchDependencyUnavailable
+        expr: worker_search_dependency_available == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Meta-Prometheus observed a worker search outage
+          description: The worker cannot reach or synchronize its search dependency.
+
+      - alert: MetaPrometheusRuleEvaluationFailed
+        expr: increase(prometheus_rule_evaluation_failures_total{job="meta-prometheus"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Meta-Prometheus failed to evaluate an alert rule
+          description: Check meta-Prometheus logs and rule configuration.
+
+      - alert: ApplicationProbeFailingWhilePrimaryIsDown
+        expr: probe_success{job="app-endpoints"} == 0 and on() up{job="prometheus"} == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: Application health check is failing while primary Prometheus is down
+          description: "Meta-Prometheus independently probed {{ $labels.instance }} and received a failure."

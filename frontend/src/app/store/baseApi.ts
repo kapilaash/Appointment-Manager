@@ -3,9 +3,13 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
+    baseUrl: import.meta.env.VITE_API_URL || '/api/v1',
     credentials: 'include', // Automatically sends and receives HttpOnly session cookies
     prepareHeaders: (headers) => {
+      if (!headers.has('X-Request-ID')) {
+        headers.set('X-Request-ID', globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
+      }
+
       // Extract CSRF token from document cookie if present
       const csrfToken = document.cookie
         .split('; ')
@@ -18,6 +22,6 @@ export const baseApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Auth', 'Instructors', 'Availability', 'Appointments', 'Students', 'DashboardStats'],
+  tagTypes: ['Auth', 'Coaches', 'Instructor', 'Instructors', 'Availability', 'Appointment', 'Appointments', 'Student', 'Students', 'Dashboard', 'DashboardStats'],
   endpoints: () => ({}),
 });

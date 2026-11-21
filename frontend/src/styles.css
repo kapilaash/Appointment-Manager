@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body { min-width: 320px; min-height: 100vh; margin: 0; }
+
+.calendar-theme .fc {
+  --fc-border-color: #e2e8f0;
+  --fc-page-bg-color: #fff;
+  --fc-neutral-bg-color: #f8fafc;
+  --fc-today-bg-color: #eef2ff;
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+.calendar-theme .fc .fc-button-primary { border-color: #4f46e5; background: #4f46e5; text-transform: capitalize; }
+.calendar-theme .fc .fc-button-primary:hover { border-color: #4338ca; background: #4338ca; }
+.calendar-theme .fc .fc-button-primary:disabled { border-color: #a5b4fc; background: #a5b4fc; }
+.calendar-theme .fc .fc-toolbar-title { font-size: 1.05rem; font-weight: 650; color: #0f172a; }
+.calendar-theme .fc .fc-event { border-radius: 5px; padding: 2px 4px; }

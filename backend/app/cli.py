@@ -1,15 +1,16 @@
 import asyncio
+
 import click
 from sqlalchemy import select
-from app.db.session import AsyncSessionLocal
+
 from app.core.security import hash_password
+from app.db.session import AsyncSessionLocal
 from app.users.models import Instructor, User, UserRole
 
 
 @click.group()
 def cli():
     """Administrative CLI commands for Chess Academy Platform."""
-    pass
 
 
 @cli.command()

@@ -1,8 +1,10 @@
 import enum
 import uuid
-from sqlalchemy import Boolean, Enum, ForeignKey, String
+
+from sqlalchemy import Boolean, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
@@ -16,7 +18,15 @@ class User(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"), default=UserRole.INSTRUCTOR, nullable=False)
+    role: Mapped[UserRole] = mapped_column(
+        Enum(
+            UserRole,
+            name="user_role",
+            values_callable=lambda roles: [role.value for role in roles],
+        ),
+        default=UserRole.INSTRUCTOR,
+        nullable=False,
+    )
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
@@ -29,6 +39,8 @@ class Instructor(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
     display_name: Mapped[str] = mapped_column(String(150), nullable=False)
     timezone: Mapped[str] = mapped_column(String(50), default="Asia/Kolkata", nullable=False)
+    country_code: Mapped[str | None] = mapped_column(String(2))
+    meeting_url: Mapped[str | None] = mapped_column(Text)
     is_available_for_booking: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="instructor_profile")

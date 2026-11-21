@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chess_secure_pass_2025}
       POSTGRES_DB: ${POSTGRES_DB:-chess_academy}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +22,7 @@ services:
     container_name: chess_academy_redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -31,13 +31,35 @@ services:
       timeout: 5s
       retries: 5
 
+  meilisearch:
+    image: getmeili/meilisearch:v1.56.2
+    container_name: chess_academy_meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:-local-development-only-change-before-deploying}
+    volumes:
+      - meilisearch_data:/meili_data
+
   mailpit:
     image: axllent/mailpit:v1.18
     container_name: chess_academy_mailpit
     restart: unless-stopped
     ports:
-      - "${MAILPIT_SMTP_PORT:-1025}:1025"
-      - "${MAILPIT_HTTP_PORT:-8025}:8025"
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_HTTP_PORT:-8025}:8025"
+
+  adminer:
+    image: adminer:6
+    container_name: chess_academy_adminer
+    restart: unless-stopped
+    profiles: ["tools"]
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - "127.0.0.1:${ADMINER_PORT:-8081}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   backend:
     build:
@@ -46,20 +68,40 @@ services:
     container_name: chess_academy_backend
     restart: unless-stopped
     environment:
-      - ENVIRONMENT=development
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-chess_admin}:${POSTGRES_PASSWORD:-chess_secure_pass_2025}@postgres:5432/${POSTGRES_DB:-chess_academy}
-      - REDIS_URL=redis://redis:6379/0
-      - SMTP_HOST=mailpit
-      - SMTP_PORT=1025
-      - FRONTEND_URL=http://localhost:5173
-      - SECRET_KEY=${SECRET_KEY:-insecure_dev_secret_key_change_in_production_32bytes_min}
-    ports:
-      - "8000:8000"
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-chess_admin}:${POSTGRES_PASSWORD:-chess_secure_pass_2025}@postgres:5432/${POSTGRES_DB:-chess_academy}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-10}
+      DB_POOL_TIMEOUT_SECONDS: ${DB_POOL_TIMEOUT_SECONDS:-30}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_MAX_CONNECTIONS: ${REDIS_MAX_CONNECTIONS:-100}
+      AUTH_PASSWORD_HASH_WORKERS: ${AUTH_PASSWORD_HASH_WORKERS:-4}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.05}
+      UPTIME_API_HEARTBEAT_URL: ${UPTIME_API_HEARTBEAT_URL:-}
+      UPTIME_HEARTBEAT_INTERVAL_SECONDS: ${UPTIME_HEARTBEAT_INTERVAL_SECONDS:-60}
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILISEARCH_API_KEY: ${MEILISEARCH_MASTER_KEY:-local-development-only-change-before-deploying}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      MAIL_FROM: ${MAIL_FROM:-no-reply@chessacademy.com}
+      FRONTEND_URL: http://localhost:5173
+      SECRET_KEY: ${SECRET_KEY:-local-development-only-change-before-deploying}
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --proxy-headers --forwarded-allow-ips='*'"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=2)"]
+      interval: 10s
+      timeout: 4s
+      retries: 6
+      start_period: 30s
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      meilisearch:
+        condition: service_started
     volumes:
       - ./backend:/app
 
@@ -70,18 +112,35 @@ services:
     container_name: chess_academy_worker
     restart: unless-stopped
     command: python -m arq app.workers.main.WorkerSettings
+    expose:
+      - "8001"
     environment:
-      - ENVIRONMENT=development
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-chess_admin}:${POSTGRES_PASSWORD:-chess_secure_pass_2025}@postgres:5432/${POSTGRES_DB:-chess_academy}
-      - REDIS_URL=redis://redis:6379/0
-      - SMTP_HOST=mailpit
-      - SMTP_PORT=1025
-      - SECRET_KEY=${SECRET_KEY:-insecure_dev_secret_key_change_in_production_32bytes_min}
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-chess_admin}:${POSTGRES_PASSWORD:-chess_secure_pass_2025}@postgres:5432/${POSTGRES_DB:-chess_academy}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-10}
+      DB_POOL_TIMEOUT_SECONDS: ${DB_POOL_TIMEOUT_SECONDS:-30}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_MAX_CONNECTIONS: ${REDIS_MAX_CONNECTIONS:-100}
+      AUTH_PASSWORD_HASH_WORKERS: ${AUTH_PASSWORD_HASH_WORKERS:-4}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.05}
+      UPTIME_WORKER_HEARTBEAT_URL: ${UPTIME_WORKER_HEARTBEAT_URL:-}
+      UPTIME_HEARTBEAT_INTERVAL_SECONDS: ${UPTIME_HEARTBEAT_INTERVAL_SECONDS:-60}
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILISEARCH_API_KEY: ${MEILISEARCH_MASTER_KEY:-local-development-only-change-before-deploying}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      MAIL_FROM: ${MAIL_FROM:-no-reply@chessacademy.com}
+      SECRET_KEY: ${SECRET_KEY:-local-development-only-change-before-deploying}
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
+      backend:
+        condition: service_healthy
+      meilisearch:
+        condition: service_started
     volumes:
       - ./backend:/app
 
@@ -89,14 +148,21 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: development
     container_name: chess_academy_frontend
     restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:8000/api/v1
+      VITE_API_URL: /api/v1
+      VITE_API_PROXY_TARGET: http://backend:8000
+      VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+      VITE_SENTRY_ENVIRONMENT: ${VITE_SENTRY_ENVIRONMENT:-development}
+      VITE_SENTRY_RELEASE: ${VITE_SENTRY_RELEASE:-}
+      VITE_SENTRY_TRACES_SAMPLE_RATE: ${VITE_SENTRY_TRACES_SAMPLE_RATE:-0.05}
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -104,3 +170,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  meilisearch_data:

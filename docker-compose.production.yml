@@ -1,0 +1,98 @@
+name: chess-academy-production
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+      args:
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        VITE_SENTRY_ENVIRONMENT: ${VITE_SENTRY_ENVIRONMENT:-production}
+        VITE_SENTRY_RELEASE: ${VITE_SENTRY_RELEASE:-}
+        VITE_SENTRY_TRACES_SAMPLE_RATE: ${VITE_SENTRY_TRACES_SAMPLE_RATE:-0.05}
+        SENTRY_ORG: ${SENTRY_ORG:-}
+        SENTRY_PROJECT: ${SENTRY_PROJECT:-}
+      secrets:
+        - sentry_auth_token
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      ENVIRONMENT: production
+      SECRET_KEY: ${SECRET_KEY:?Set a unique high-entropy secret}
+      LOG_LEVEL: INFO
+      DATABASE_URL: ${DATABASE_URL:?Set a managed PostgreSQL URL using asyncpg}
+      REDIS_URL: ${REDIS_URL:?Set a managed Redis URL}
+      MEILISEARCH_URL: ${MEILISEARCH_URL:?Set a managed Meilisearch URL}
+      MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY:?Set a restricted Meilisearch server key}
+      CORS_ORIGINS: ${CORS_ORIGINS:?Set the academy HTTPS origin as JSON}
+      FRONTEND_URL: ${FRONTEND_URL:?Set the academy HTTPS origin}
+      SESSION_MAX_AGE_SECONDS: ${SESSION_MAX_AGE_SECONDS:-604800}
+      SMTP_HOST: ${SMTP_HOST:?Set the production SMTP host}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      SMTP_USE_SSL: ${SMTP_USE_SSL:-false}
+      MAIL_FROM: ${MAIL_FROM:?Set an authorized sender email}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Thirumal Chess Academy}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.05}
+      UPTIME_API_HEARTBEAT_URL: ${UPTIME_API_HEARTBEAT_URL:-}
+      UPTIME_HEARTBEAT_INTERVAL_SECONDS: ${UPTIME_HEARTBEAT_INTERVAL_SECONDS:-60}
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=2)"]
+      interval: 15s
+      timeout: 4s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+    command: ["python", "-m", "arq", "app.workers.main.WorkerSettings"]
+    expose:
+      - "8001"
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: ${DATABASE_URL:?Set a managed PostgreSQL URL using asyncpg}
+      REDIS_URL: ${REDIS_URL:?Set a managed Redis URL}
+      MEILISEARCH_URL: ${MEILISEARCH_URL:?Set a managed Meilisearch URL}
+      MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY:?Set a restricted Meilisearch server key}
+      SMTP_HOST: ${SMTP_HOST:?Set the production SMTP host}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      SMTP_USE_SSL: ${SMTP_USE_SSL:-false}
+      MAIL_FROM: ${MAIL_FROM:?Set an authorized sender email}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Thirumal Chess Academy}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.05}
+      UPTIME_WORKER_HEARTBEAT_URL: ${UPTIME_WORKER_HEARTBEAT_URL:-}
+      UPTIME_HEARTBEAT_INTERVAL_SECONDS: ${UPTIME_HEARTBEAT_INTERVAL_SECONDS:-60}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+secrets:
+  sentry_auth_token:
+    file: ${SENTRY_AUTH_TOKEN_FILE:-.sentry-auth-token.example}
