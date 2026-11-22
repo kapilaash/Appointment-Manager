@@ -1,5 +1,6 @@
-# Normalise line endings in the repository; check text files out natively.
-* text=auto
+# One line ending everywhere: Prettier, ruff, shells and containers all expect LF,
+# and every modern editor on Windows handles it.
+* text=auto eol=lf
 
 # Files executed or parsed inside Linux containers must keep LF even on Windows checkouts.
 *.sh text eol=lf
