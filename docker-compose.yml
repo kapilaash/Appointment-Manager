@@ -88,7 +88,7 @@ services:
       MAIL_FROM: ${MAIL_FROM:-no-reply@chessacademy.com}
       FRONTEND_URL: http://localhost:5173
       SECRET_KEY: ${SECRET_KEY:-local-development-only-change-before-deploying}
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --proxy-headers --forwarded-allow-ips='*'"
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --proxy-headers --forwarded-allow-ips='127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16'"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=2)"]
       interval: 10s

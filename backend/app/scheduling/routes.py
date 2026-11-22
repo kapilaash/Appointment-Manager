@@ -583,7 +583,9 @@ async def list_instructors(user: User = Depends(get_current_user), db: AsyncSess
 
 
 async def _enforce_public_rate_limit(request: Request, *, scope: str, limit: int, window_seconds: int) -> None:
-    client_id = request.headers.get("x-client-ip") or (request.client.host if request.client else "unknown")
+    # request.client is resolved by uvicorn from X-Forwarded-For only when the peer is a trusted proxy
+    # (FORWARDED_ALLOW_IPS), so callers cannot spoof it to dodge the limit.
+    client_id = request.client.host if request.client else "unknown"
     digest = hashlib.sha256(client_id.encode("utf-8")).hexdigest()
     redis = get_redis_client()
     try:
@@ -1230,9 +1232,18 @@ async def delete_student_data(
 
 @router.get("/dashboard/summary")
 async def dashboard_summary(
-    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)
+    timezone: str | None = Query(default=None, max_length=64, description="Viewer's IANA time zone for 'today'"),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
 ) -> dict[str, int]:
     coach_ids: list[UUID] | None = None
+    zone_name = "UTC"
+    if timezone:
+        try:
+            ZoneInfo(timezone)
+            zone_name = timezone
+        except (ZoneInfoNotFoundError, ValueError) as exc:
+            raise HTTPException(422, "Use a valid IANA time zone") from exc
     if user.role == UserRole.INSTRUCTOR:
         profile = await db.scalar(select(Instructor).where(Instructor.user_id == user.id))
         if profile is None:
@@ -1243,10 +1254,13 @@ async def dashboard_summary(
                 "cancelled_appointments": 0,
             }
         coach_ids = [profile.id]
+        zone_name = profile.timezone  # a coach's "today" is their own working day
 
     now = datetime.now(UTC)
-    today_start = datetime.combine(now.date(), time.min, UTC)
-    tomorrow = today_start + timedelta(days=1)
+    zone = ZoneInfo(zone_name)
+    local_today = now.astimezone(zone).date()
+    today_start = datetime.combine(local_today, time.min, zone).astimezone(UTC)
+    tomorrow = datetime.combine(local_today + timedelta(days=1), time.min, zone).astimezone(UTC)
     scope = [Appointment.instructor_id.in_(coach_ids)] if coach_ids else []
     total_instructors = 0 if coach_ids else int(
         await db.scalar(select(func.count(Instructor.id)).join(User, User.id == Instructor.user_id).where(User.is_active.is_(True))) or 0

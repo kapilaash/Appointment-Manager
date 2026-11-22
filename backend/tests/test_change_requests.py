@@ -335,3 +335,24 @@ def test_reviewed_email_tells_the_coach_the_outcome_and_note() -> None:
     assert subject == "Your request was not approved: Demo cancellation"
     assert "Please keep this demo" in body
     assert "Cancel the demo on Mon 07 Jan 2030, 10:00 AM UTC." in body
+
+
+async def test_dashboard_counts_today_in_the_viewers_time_zone(world, client) -> None:
+    act_as(world, world.admin)
+    assert (await client.get("/api/v1/dashboard/summary", params={"timezone": "Not/AZone"})).status_code == 422
+    # A demo at 23:30 UTC today is "tomorrow" in Kiritimati (UTC+14) and "today" in UTC.
+    now = datetime.now(UTC)
+    late = datetime.combine(now.date(), time(23, 30), UTC)
+    if late <= now:
+        pytest.skip("Too close to UTC midnight to place a demo later today")
+    async with world.sessions() as db:
+        db.add(Appointment(
+            instructor_id=world.other.id, starts_at=late, ends_at=late + timedelta(minutes=30),
+            occupied_from=late, occupied_until=late + timedelta(minutes=30),
+            status="confirmed", idempotency_key=str(uuid4()),
+        ))
+        await db.commit()
+    utc_today = (await client.get("/api/v1/dashboard/summary", params={"timezone": "UTC"})).json()["today_appointments"]
+    kiritimati_today = (await client.get("/api/v1/dashboard/summary", params={"timezone": "Pacific/Kiritimati"})).json()["today_appointments"]
+    assert utc_today >= 1
+    assert kiritimati_today < utc_today

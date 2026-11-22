@@ -1,6 +1,6 @@
 # Chess Academy Backend
 
-Modular monolith backend API for Royal Chess Academy demo scheduling platform.
+Modular monolith backend API for Thirumal Chess Academy demo scheduling platform.
 
 ## Technologies
 - Python 3.12

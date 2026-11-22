@@ -75,7 +75,8 @@ export const appointmentApi = api.injectEndpoints({
       query: (id) => `/appointments/${id}/notifications`,
     }),
     dashboard: build.query<{ total_instructors: number; upcoming_appointments: number; today_appointments: number; cancelled_appointments: number }, void>({
-      query: () => '/dashboard/summary', providesTags: ['Dashboard'],
+      // "Today" is counted in the viewer's own time zone, not UTC.
+      query: () => ({ url: '/dashboard/summary', params: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone } }), providesTags: ['Dashboard'],
     }),
     settings: build.query<{ demo_duration_minutes: number; slot_interval_minutes: number; buffer_before_minutes: number; buffer_after_minutes: number }, void>({
       query: () => '/settings',

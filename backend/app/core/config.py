@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     UPTIME_HEARTBEAT_INTERVAL_SECONDS: int = Field(default=60, ge=15, le=3600)
 
     DATABASE_URL: str = "postgresql+asyncpg://chess_admin:chess_secure_pass_2025@localhost:5432/chess_academy"
+    # Log every SQL statement; noisy and memory-hungry, so opt-in for debugging only.
+    DB_ECHO: bool = False
     DB_POOL_SIZE: int = Field(default=5, ge=1, le=100)
     DB_MAX_OVERFLOW: int = Field(default=10, ge=0, le=100)
     DB_POOL_TIMEOUT_SECONDS: int = Field(default=30, ge=1, le=120)
@@ -37,7 +39,7 @@ class Settings(BaseSettings):
     SMTP_USE_TLS: bool = False
     SMTP_USE_SSL: bool = False
     MAIL_FROM: str = "academy@chessplatform.com"
-    MAIL_FROM_NAME: str = "Royal Chess Academy"
+    MAIL_FROM_NAME: str = "Thirumal Chess Academy"
 
     MEILISEARCH_URL: str = "http://localhost:7700"
     MEILISEARCH_API_KEY: str = "local-development-only-change-before-deploying"
