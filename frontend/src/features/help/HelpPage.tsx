@@ -9,6 +9,7 @@ const adminSteps: GuideStep[] = [
   { title: 'Invite your coaching team', description: 'Create a coach invitation using the email address they will use to sign in. The one-time link expires after 48 hours.', to: '/coaches', action: 'Manage coach accounts' },
   { title: 'Keep availability current', description: 'Coaches set weekly hours in their own time zone. Date-specific exceptions handle holidays and one-off schedule changes. Changes you make here apply immediately.', to: '/availability', action: 'Review availability' },
   { title: 'Approve coach requests', description: 'When a coach changes their hours, time off, extra hours, or time zone, or asks to cancel or reschedule a demo, nothing changes until you approve it. Every admin is emailed; the coach is emailed your decision.', to: '/requests', action: 'Open approvals' },
+  { title: 'Match a client to a coach', description: 'Team availability shows every coach’s free and booked time for a day in the client’s time zone. Select a free block to start a booking with that coach.', to: '/team', action: 'Open team availability' },
   { title: 'Book a demo class', description: 'Choose an available coach and time, then add the student or parent contact email for updates.', to: '/book', action: 'Create a booking' },
   { title: 'Track changes and messages', description: 'Use the calendar for upcoming sessions. Appointment details show cancellation, reschedule, and email delivery history.', to: '/appointments', action: 'Open appointments' },
 ];

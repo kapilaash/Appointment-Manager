@@ -137,6 +137,14 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await weeklyRequest.getByRole('button', { name: 'Approve' }).click();
   await expect(adminPage.getByText(/^Approved: weekly availability change/)).toBeVisible();
   await expect(weeklyRequest).toHaveCount(0);
+
+  // The team view shows the newly approved hours; a free block opens a pre-filled booking.
+  await adminPage.getByRole('link', { name: 'Team availability' }).click();
+  await adminPage.getByRole('button', { name: 'Next day' }).click();
+  const teamRow = adminPage.getByRole('listitem').filter({ hasText: instructorName });
+  await expect(teamRow).toBeVisible({ timeout: 30_000 });
+  await teamRow.getByRole('link', { name: /free .* Book a demo/ }).first().click();
+  await expect(adminPage.getByLabel('Available coaches').locator('option:checked')).toHaveText(instructorName);
   await adminPage.getByRole('link', { name: 'Settings' }).click();
   await expectTheme(adminPage, 'light', 'rgb(248, 250, 252)', 'rgb(255, 255, 255)');
   await adminPage.getByRole('radio', { name: /Black & White/ }).check();

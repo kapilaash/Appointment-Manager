@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { CalendarDays, CalendarPlus, ChevronDown, CircleHelp, ClipboardCheck, Clock3, Crown, GraduationCap, LayoutDashboard, LogOut, Palette, Settings, UserCircle, Users } from 'lucide-react';
+import { CalendarDays, CalendarPlus, ChevronDown, CircleHelp, ClipboardCheck, Clock3, Crown, GraduationCap, LayoutDashboard, LayoutGrid, LogOut, Palette, Settings, UserCircle, Users } from 'lucide-react';
 import { useLogoutMutation, useMeQuery } from '../../features/auth/api';
 import { ThemeProvider } from '../../features/appearance/ThemeContext';
 import { LoginPage } from '../../features/auth/LoginPage';
@@ -19,6 +19,7 @@ const adminLinks = [
   { to: '/instructors', label: 'Instructors', icon: Users },
   { to: '/coaches', label: 'Coach accounts', icon: Users },
   { to: '/students', label: 'Students', icon: GraduationCap },
+  { to: '/team', label: 'Team availability', icon: LayoutGrid },
   { to: '/availability', label: 'Availability', icon: Clock3 },
   { to: '/profile', label: 'My profile', icon: UserCircle },
   { to: '/appointments', label: 'Appointments', icon: CalendarDays },

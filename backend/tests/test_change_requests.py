@@ -376,3 +376,31 @@ async def test_theme_preference_is_saved_to_the_account(world, client) -> None:
     assert saved.status_code == 200 and saved.json()["theme_preference"] == "system"
     async with world.sessions() as db:
         assert (await db.get(User, world.coach_user.id)).theme_preference == "system"
+
+
+async def test_team_overview_shows_free_and_booked_time_in_the_viewers_zone(world, client) -> None:
+    act_as(world, world.coach_user)
+    assert (await client.get("/api/v1/availability/overview", params={"day": str(world.demo_day)})).status_code == 403
+
+    act_as(world, world.admin)
+    utc = (await client.get("/api/v1/availability/overview", params={"day": str(world.demo_day), "timezone": "UTC"})).json()
+    coach = next(item for item in utc["coaches"] if item["id"] == str(world.coach.id))
+
+    def at(hour: int, minute: int = 0, day: date = world.demo_day) -> str:
+        return datetime.combine(day, time(hour, minute), UTC).isoformat()
+
+    # Works 08:00–20:00 UTC with a demo 10:00–11:00.
+    assert coach["free"] == [{"start": at(8), "end": at(10)}, {"start": at(11), "end": at(20)}]
+    assert [(b["start"], b["end"]) for b in coach["booked"]] == [(at(10), at(11))]
+
+    # In India the viewed day starts at 18:30 UTC the day before, so it also catches
+    # the end of the previous day's shift and stops at 18:30 UTC.
+    india = (await client.get("/api/v1/availability/overview", params={"day": str(world.demo_day), "timezone": "Asia/Kolkata"})).json()
+    coach = next(item for item in india["coaches"] if item["id"] == str(world.coach.id))
+    previous = world.demo_day - timedelta(days=1)
+    assert coach["free"] == [
+        {"start": at(18, 30, previous), "end": at(20, 0, previous)},
+        {"start": at(8), "end": at(10)},
+        {"start": at(11), "end": at(18, 30)},
+    ]
+    assert (await client.get("/api/v1/availability/overview", params={"day": str(world.demo_day), "timezone": "Mars/Base"})).status_code == 422

@@ -16,7 +16,7 @@ from sqlalchemy.orm import selectinload
 
 from app.auth.dependencies import get_current_user, require_admin
 from app.auth.session_store import get_redis_client
-from app.availability.engine import Interval, actual_windows, generate_slots
+from app.availability.engine import Interval, actual_windows, generate_slots, merge, subtract
 from app.db.session import get_db_session
 from app.scheduling import change_requests as cr
 from app.scheduling.models import (
@@ -1228,6 +1228,96 @@ async def delete_student_data(
     await db.delete(student)
     await db.commit()
     return {"status": result}
+
+
+def _interval_out(interval: Interval) -> dict[str, str]:
+    return {"start": interval.start.isoformat(), "end": interval.end.isoformat()}
+
+
+@router.get("/availability/overview")
+async def availability_overview(
+    day: date,
+    timezone: str = Query(default="UTC", max_length=64, description="Show the day in this IANA time zone, e.g. the client's"),
+    _: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """Every bookable coach's free and booked time for one day, seen from one time zone.
+
+    Admins use this to match a client's preferred time against the whole team at once.
+    The data is fetched in a fixed number of queries regardless of how many coaches exist.
+    """
+    try:
+        view_zone = ZoneInfo(timezone)
+    except (ZoneInfoNotFoundError, ValueError) as exc:
+        raise HTTPException(422, "Use a valid IANA time zone") from exc
+    view_start = datetime.combine(day, time.min, view_zone).astimezone(UTC)
+    view_end = datetime.combine(day + timedelta(days=1), time.min, view_zone).astimezone(UTC)
+    view = [Interval(view_start, view_end)]
+
+    coaches = (await db.execute(
+        select(Instructor)
+        .join(User, User.id == Instructor.user_id)
+        .where(User.is_active.is_(True), Instructor.is_available_for_booking.is_(True))
+        .order_by(Instructor.display_name)
+    )).scalars().all()
+    coach_ids = [coach.id for coach in coaches]
+    if not coach_ids:
+        return {"day": day.isoformat(), "timezone": timezone, "start": view_start.isoformat(), "end": view_end.isoformat(), "coaches": []}
+
+    rules_by_coach: dict[UUID, list[AvailabilityRule]] = {coach_id: [] for coach_id in coach_ids}
+    for rule in (await db.scalars(select(AvailabilityRule).where(AvailabilityRule.instructor_id.in_(coach_ids)))).all():
+        rules_by_coach[rule.instructor_id].append(rule)
+    # Any coach's local date touching this view day is within one day either side.
+    exceptions_by_coach: dict[UUID, list[AvailabilityException]] = {coach_id: [] for coach_id in coach_ids}
+    for item in (await db.scalars(select(AvailabilityException).where(
+        AvailabilityException.instructor_id.in_(coach_ids),
+        AvailabilityException.exception_date.between(day - timedelta(days=1), day + timedelta(days=1)),
+    ))).all():
+        exceptions_by_coach[item.instructor_id].append(item)
+    booked_by_coach: dict[UUID, list[Appointment]] = {coach_id: [] for coach_id in coach_ids}
+    for appointment in (await db.scalars(
+        select(Appointment).options(selectinload(Appointment.student)).where(
+            Appointment.instructor_id.in_(coach_ids),
+            Appointment.status == "confirmed",
+            Appointment.occupied_from < view_end,
+            Appointment.occupied_until > view_start,
+        ).order_by(Appointment.starts_at)
+    )).all():
+        booked_by_coach[appointment.instructor_id].append(appointment)
+    pending_by_coach = dict((await db.execute(
+        select(ChangeRequest.instructor_id, func.count(ChangeRequest.id))
+        .where(ChangeRequest.instructor_id.in_(coach_ids), ChangeRequest.status == cr.PENDING)
+        .group_by(ChangeRequest.instructor_id)
+    )).all())
+
+    output = []
+    for coach in coaches:
+        coach_zone = ZoneInfo(coach.timezone)
+        local_days = {view_start.astimezone(coach_zone).date(), (view_end - timedelta(microseconds=1)).astimezone(coach_zone).date()}
+        windows: list[Interval] = []
+        for local_day in sorted(local_days):
+            windows.extend(actual_windows(local_day, coach.timezone, rules_by_coach[coach.id], exceptions_by_coach[coach.id]))
+        # Clip working hours to the viewed day, then remove booked time.
+        working = subtract(view, subtract(view, merge(windows)))
+        booked = booked_by_coach[coach.id]
+        free = subtract(working, [Interval(item.occupied_from, item.occupied_until) for item in booked])
+        output.append({
+            "id": str(coach.id),
+            "display_name": coach.display_name,
+            "timezone": coach.timezone,
+            "free": [_interval_out(interval) for interval in free],
+            "booked": [
+                {
+                    "id": str(item.id),
+                    "start": item.starts_at.isoformat(),
+                    "end": item.ends_at.isoformat(),
+                    "student_name": item.student.name if item.student else "Deleted student",
+                }
+                for item in booked
+            ],
+            "pending_requests": int(pending_by_coach.get(coach.id, 0)),
+        })
+    return {"day": day.isoformat(), "timezone": timezone, "start": view_start.isoformat(), "end": view_end.isoformat(), "coaches": output}
 
 
 @router.get("/dashboard/summary")

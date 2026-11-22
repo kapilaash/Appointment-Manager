@@ -22,6 +22,7 @@ const CoachRegistrationPage = lazy(() => import('../../features/coaches/CoachReg
 const CoachPasswordResetPage = lazy(() => import('../../features/coaches/CoachPasswordResetPage').then((module) => ({ default: module.CoachPasswordResetPage })));
 const CoachForgotPasswordPage = lazy(() => import('../../features/coaches/CoachForgotPasswordPage').then((module) => ({ default: module.CoachForgotPasswordPage })));
 const ProfilePage = lazy(() => import('../../features/auth/ProfilePage').then((module) => ({ default: module.ProfilePage })));
+const TeamAvailabilityPage = lazy(() => import('../../features/availability/TeamAvailabilityPage').then((module) => ({ default: module.TeamAvailabilityPage })));
 const RequestsPage = lazy(() => import('../../features/requests/RequestsPage').then((module) => ({ default: module.RequestsPage })));
 const HelpPage = lazy(() => import('../../features/help/HelpPage').then((module) => ({ default: module.HelpPage })));
 
@@ -83,6 +84,7 @@ export const router = createBrowserRouter([
         children: [
           { path: 'book', element: <RouteBoundary><BookingPage /></RouteBoundary> },
           { path: 'requests', element: <RouteBoundary><RequestsPage /></RouteBoundary> },
+          { path: 'team', element: <RouteBoundary><TeamAvailabilityPage /></RouteBoundary> },
           { path: 'instructors', element: <RouteBoundary><InstructorsPage /></RouteBoundary> },
           { path: 'coaches', element: <RouteBoundary><CoachAdminPage /></RouteBoundary> },
           { path: 'students', element: <RouteBoundary><StudentsPage /></RouteBoundary> },
