@@ -20,19 +20,26 @@ export default {
         ],
       },
       colors: {
-        surface: 'rgb(var(--surface) / <alpha-value>)',
-        heading: 'rgb(var(--heading) / <alpha-value>)',
-        action: 'rgb(var(--action) / <alpha-value>)',
-        'on-action': 'rgb(var(--action-foreground) / <alpha-value>)',
-        'action-hover': 'rgb(var(--action-hover) / <alpha-value>)',
-        danger: 'rgb(var(--danger) / <alpha-value>)',
-        'danger-hover': 'rgb(var(--danger-hover) / <alpha-value>)',
-        slate: shades('slate', [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]),
-        indigo: shades('indigo', [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]),
-        amber: shades('amber', [50, 100, 200, 300, 700, 900, 950]),
-        emerald: shades('emerald', [50, 100, 600, 700, 800]),
-        rose: shades('rose', [50, 200, 400, 500, 600, 700, 800]),
-        red: shades('red', [50, 200, 700, 800]),
+        // Roles
+        canvas: 'rgb(var(--neutral-50) / <alpha-value>)', // page background
+        surface: 'rgb(var(--surface) / <alpha-value>)', // cards, panels, inputs
+        heading: 'rgb(var(--heading) / <alpha-value>)', // page and section headings
+        'on-accent': 'rgb(var(--on-accent) / <alpha-value>)', // text/icons on accent fills
+        ink: '#020617', // always-dark backdrop (sign-in screen, overlays); not themed
+        // Meaning-named scales: every theme defines its own values for these.
+        neutral: shades('neutral', [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]),
+        accent: {
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
+          hover: 'rgb(var(--accent-hover) / <alpha-value>)',
+          ...shades('accent', [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]),
+        },
+        success: shades('success', [50, 100, 200, 600, 700, 800, 900]),
+        warning: shades('warning', [50, 100, 200, 300, 500, 700, 900, 950]),
+        danger: {
+          DEFAULT: 'rgb(var(--danger) / <alpha-value>)',
+          hover: 'rgb(var(--danger-hover) / <alpha-value>)',
+          ...shades('danger', [50, 200, 400, 500, 600, 700, 800]),
+        },
       },
       boxShadow: {
         // Soft, layered elevation for cards; lighter than Tailwind's default shadow-sm.

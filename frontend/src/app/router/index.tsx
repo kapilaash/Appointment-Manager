@@ -112,7 +112,7 @@ function RouteErrorPage() {
         <h1 className="text-xl font-semibold">
           {newRelease ? 'A new version is available' : 'This page could not load'}
         </h1>
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 text-sm text-neutral-500">
           {newRelease
             ? 'Reload to continue with the latest version.'
             : 'Try reloading. The error has been recorded for support.'}

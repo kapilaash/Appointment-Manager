@@ -5,10 +5,11 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant };
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-action text-on-action shadow-sm hover:bg-action-hover hover:shadow focus-visible:ring-indigo-500',
-  secondary: 'bg-surface text-slate-700 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 hover:ring-slate-400',
-  ghost: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-  danger: 'bg-danger text-white shadow-sm hover:bg-danger-hover focus-visible:ring-rose-500',
+  primary: 'bg-accent text-on-accent shadow-sm hover:bg-accent-hover hover:shadow focus-visible:ring-accent-500',
+  secondary:
+    'bg-surface text-neutral-700 ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 hover:ring-neutral-400',
+  ghost: 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900',
+  danger: 'bg-danger text-white shadow-sm hover:bg-danger-hover focus-visible:ring-danger-500',
 };
 
 /**

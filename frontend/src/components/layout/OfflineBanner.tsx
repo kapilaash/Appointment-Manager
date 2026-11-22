@@ -21,7 +21,7 @@ export function OfflineBanner() {
   return (
     <div
       role="status"
-      className="ui-enter sticky top-0 z-40 flex items-center justify-center gap-2 bg-amber-100 px-4 py-2 text-center text-sm font-medium text-amber-950"
+      className="ui-enter sticky top-0 z-40 flex items-center justify-center gap-2 bg-warning-100 px-4 py-2 text-center text-sm font-medium text-warning-950"
     >
       <WifiOff size={16} aria-hidden="true" />
       You’re offline. Changes can’t be saved right now; the page refreshes automatically when you reconnect.

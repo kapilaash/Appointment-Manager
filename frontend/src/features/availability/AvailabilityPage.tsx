@@ -23,7 +23,7 @@ import { isPendingReceipt, useWithdrawChangeRequestMutation } from '../requests/
 
 const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const blank: AvailabilityRule = { day_of_week: 0, start_local_time: '09:00', end_local_time: '17:00' };
-const inputClass = 'rounded-lg border border-slate-300 px-3 py-2 text-sm';
+const inputClass = 'rounded-lg border border-neutral-300 px-3 py-2 text-sm';
 
 function timeSpan(start: string | null | undefined, end: string | null | undefined) {
   return start ? `${start.slice(0, 5)}–${end?.slice(0, 5) ?? ''}` : 'All day';
@@ -35,7 +35,7 @@ function submittedOn(value: string) {
 
 function PendingChip({ children }: { children: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-900">
+    <span className="inline-flex items-center gap-1 rounded-full bg-warning-50 px-2.5 py-1 text-xs font-medium text-warning-900">
       <Hourglass size={12} aria-hidden="true" />
       {children}
     </span>
@@ -205,7 +205,7 @@ export function AvailabilityPage() {
   if (instructors.isLoading) return <div className="h-64 animate-pulse rounded-2xl bg-surface" />;
   if (instructors.isError)
     return (
-      <div role="alert" className="rounded-lg bg-rose-50 p-4 text-sm text-rose-700">
+      <div role="alert" className="rounded-lg bg-danger-50 p-4 text-sm text-danger-700">
         Coach profiles could not be loaded. Refresh and try again.
       </div>
     );
@@ -220,20 +220,20 @@ export function AvailabilityPage() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-heading">Weekly availability</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-neutral-500">
             {needsApproval
               ? 'Propose your recurring hours and time off. An administrator approves each change before families can book it.'
               : 'Set recurring coaching hours and add date-specific time off.'}
           </p>
         </div>
         {instructors.data && instructors.data.length > 1 && (
-          <label className="w-full text-sm font-medium text-slate-700 sm:w-auto">
+          <label className="w-full text-sm font-medium text-neutral-700 sm:w-auto">
             View coach
             <select
               aria-label="View coach availability"
               value={instructor?.id}
               onChange={(event) => setSelectedId(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-surface px-3 text-sm sm:min-w-52"
+              className="mt-1 w-full rounded-lg border border-neutral-300 bg-surface px-3 text-sm sm:min-w-52"
             >
               {instructors.data.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -248,7 +248,7 @@ export function AvailabilityPage() {
       {availability.isError && (
         <div
           role="alert"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-rose-50 p-4 text-sm text-rose-700"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-danger-50 p-4 text-sm text-danger-700"
         >
           <span>Availability could not be loaded. Retry the request or check the API connection.</span>
           <Button variant="secondary" onClick={() => void availability.refetch()}>
@@ -257,7 +257,7 @@ export function AvailabilityPage() {
         </div>
       )}
       {!needsApproval && pending.length > 0 && (
-        <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        <p role="status" className="rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm text-warning-900">
           This coach has {pending.length} availability {pending.length === 1 ? 'request' : 'requests'} waiting for
           review.{' '}
           <Link className="font-semibold underline" to="/requests">
@@ -271,8 +271,8 @@ export function AvailabilityPage() {
           <Card className="p-5 sm:p-6">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
               <div>
-                <h3 className="font-semibold text-slate-900">Coach country and time zone</h3>
-                <p className="mt-1 text-sm text-slate-500">
+                <h3 className="font-semibold text-neutral-900">Coach country and time zone</h3>
+                <p className="mt-1 text-sm text-neutral-500">
                   Weekly hours follow the selected IANA region, including daylight saving changes.
                 </p>
                 {pendingTimezone && (
@@ -323,7 +323,7 @@ export function AvailabilityPage() {
               </div>
             </div>
             {timezoneError && (
-              <p role="alert" className="mt-3 text-sm text-rose-700">
+              <p role="alert" className="mt-3 text-sm text-danger-700">
                 {timezoneError}
               </p>
             )}
@@ -332,7 +332,7 @@ export function AvailabilityPage() {
           {pendingWeekly && (
             <div
               role="status"
-              className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 rounded-xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-900 sm:flex-row sm:items-center sm:justify-between"
             >
               <span className="flex items-start gap-2">
                 <Hourglass size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
@@ -364,10 +364,10 @@ export function AvailabilityPage() {
             </div>
           )}
 
-          <Card className="divide-y divide-slate-100 overflow-hidden">
+          <Card className="divide-y divide-neutral-100 overflow-hidden">
             {weekdays.map((day, index) => (
               <div key={day} className="grid gap-3 px-5 py-4 sm:grid-cols-[130px_1fr] sm:px-6">
-                <div className="pt-2 text-sm font-medium text-slate-800">{day}</div>
+                <div className="pt-2 text-sm font-medium text-neutral-800">{day}</div>
                 <div className="space-y-2">
                   {rulesFor(index).map(({ rule, index: ruleIndex }) => (
                     <div key={ruleIndex} className="flex flex-wrap items-center gap-2">
@@ -378,7 +378,7 @@ export function AvailabilityPage() {
                         onChange={(event) => editRule(ruleIndex, 'start_local_time', event.target.value)}
                         className={inputClass}
                       />
-                      <span className="text-slate-400">to</span>
+                      <span className="text-neutral-500">to</span>
                       <input
                         aria-label={`${day} end`}
                         type="time"
@@ -390,18 +390,18 @@ export function AvailabilityPage() {
                         type="button"
                         onClick={() => removeRule(ruleIndex)}
                         aria-label={`Remove ${day} interval`}
-                        className="rounded-md p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-700"
+                        className="rounded-md p-2 text-neutral-500 hover:bg-danger-50 hover:text-danger-700"
                       >
                         <Trash2 size={16} />
                       </button>
                     </div>
                   ))}
-                  {!rulesFor(index).length && <p className="py-2 text-sm text-slate-400">Unavailable</p>}
+                  {!rulesFor(index).length && <p className="py-2 text-sm text-neutral-500">Unavailable</p>}
                   <div className="flex flex-wrap items-center gap-4">
                     <button
                       type="button"
                       onClick={() => addRule(index)}
-                      className="inline-flex items-center gap-1.5 py-1 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
+                      className="inline-flex items-center gap-1.5 py-1 text-xs font-semibold text-accent-700 hover:text-accent-900"
                     >
                       <Plus size={14} />
                       Add hours
@@ -410,7 +410,7 @@ export function AvailabilityPage() {
                       <button
                         type="button"
                         onClick={() => copyPreviousDay(index)}
-                        className="py-1 text-xs font-medium text-slate-500 hover:text-slate-800"
+                        className="py-1 text-xs font-medium text-neutral-500 hover:text-neutral-800"
                       >
                         Copy previous day
                       </button>
@@ -422,7 +422,10 @@ export function AvailabilityPage() {
           </Card>
 
           {weeklyWarning?.warning && (
-            <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <div
+              role="alert"
+              className="rounded-xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-900"
+            >
               {weeklyWarning.warning}
               <ul className="mt-2 list-inside list-disc">
                 {weeklyWarning.affected_bookings.map((id) => (
@@ -436,13 +439,13 @@ export function AvailabilityPage() {
             </div>
           )}
           {availabilityError && (
-            <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">
+            <p role="alert" className="rounded-lg bg-danger-50 p-3 text-sm text-danger-700">
               {availabilityError}
             </p>
           )}
           <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-end sm:justify-end">
             {needsApproval && (
-              <label className="block flex-1 text-sm font-medium text-slate-700 sm:max-w-md">
+              <label className="block flex-1 text-sm font-medium text-neutral-700 sm:max-w-md">
                 Note for the administrator (optional)
                 <input
                   maxLength={1000}
@@ -465,8 +468,8 @@ export function AvailabilityPage() {
 
           <Card className="p-5 sm:p-6">
             <div>
-              <h3 className="font-semibold text-slate-900">Time off and exceptions</h3>
-              <p className="mt-1 text-sm text-slate-500">
+              <h3 className="font-semibold text-neutral-900">Time off and exceptions</h3>
+              <p className="mt-1 text-sm text-neutral-500">
                 Block time off or add hours for a specific date.
                 {needsApproval ? ' Each entry needs admin approval.' : ''}
               </p>
@@ -478,13 +481,13 @@ export function AvailabilityPage() {
                 type="date"
                 value={exceptionDate}
                 onChange={(event) => setExceptionDate(event.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+                className="rounded-lg border border-neutral-300 px-3 py-2.5 text-sm"
               />
               <select
                 aria-label="Exception type"
                 value={exceptionType}
                 onChange={(event) => setExceptionType(event.target.value as 'unavailable' | 'additional_available')}
-                className="rounded-lg border border-slate-300 bg-surface px-3 py-2.5 text-sm"
+                className="rounded-lg border border-neutral-300 bg-surface px-3 py-2.5 text-sm"
               >
                 <option value="unavailable">Unavailable</option>
                 <option value="additional_available">Additional available hours</option>
@@ -494,9 +497,9 @@ export function AvailabilityPage() {
                 placeholder="Reason (optional)"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
-                className="min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+                className="min-w-0 rounded-lg border border-neutral-300 px-3 py-2.5 text-sm"
               />
-              <label className="text-xs text-slate-500">
+              <label className="text-xs text-neutral-500">
                 From (leave both times blank for all day)
                 <input
                   aria-label="Exception from"
@@ -506,7 +509,7 @@ export function AvailabilityPage() {
                   className={`mt-1 block ${inputClass}`}
                 />
               </label>
-              <label className="text-xs text-slate-500">
+              <label className="text-xs text-neutral-500">
                 Until
                 <input
                   aria-label="Exception until"
@@ -523,14 +526,14 @@ export function AvailabilityPage() {
               </div>
             </form>
             {exceptionError && (
-              <p role="alert" className="mt-3 text-sm text-rose-700">
+              <p role="alert" className="mt-3 text-sm text-danger-700">
                 {exceptionError}
               </p>
             )}
             {exceptionWarning?.warning && (
               <div
                 role="alert"
-                className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+                className="mt-4 rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm text-warning-900"
               >
                 {exceptionWarning.warning}{' '}
                 {exceptionWarning.affected_bookings?.map((id) => (
@@ -541,14 +544,14 @@ export function AvailabilityPage() {
               </div>
             )}
             {exceptions.length || pendingAdditions.length ? (
-              <div className="mt-5 divide-y divide-slate-100">
+              <div className="mt-5 divide-y divide-neutral-100">
                 {exceptions.map((item: AvailabilityException) => {
                   const removal = pendingRemovals.get(item.id);
                   return (
                     <div key={item.id} className="flex items-center justify-between gap-3 py-3 text-sm">
                       <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <strong className="font-medium">{item.exception_date}</strong>
-                        <span className="text-slate-500">
+                        <span className="text-neutral-500">
                           {timeSpan(item.start_local_time, item.end_local_time)} · {item.reason || item.exception_type}
                         </span>
                         {removal && <PendingChip>Removal awaiting approval</PendingChip>}
@@ -570,7 +573,7 @@ export function AvailabilityPage() {
                             aria-label="Remove exception"
                             disabled={deleteExceptionResult.isLoading}
                             onClick={() => void removeException(item.id)}
-                            className="min-h-11 min-w-11 rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50"
+                            className="min-h-11 min-w-11 rounded-lg p-2 text-neutral-500 hover:bg-danger-50 hover:text-danger-700 disabled:opacity-50"
                           >
                             <Trash2 size={15} />
                           </button>
@@ -582,8 +585,8 @@ export function AvailabilityPage() {
                 {pendingAdditions.map((item) => (
                   <div key={item.id} className="flex items-center justify-between gap-3 py-3 text-sm">
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <strong className="font-medium text-slate-600">{item.payload.exception_date}</strong>
-                      <span className="text-slate-500">
+                      <strong className="font-medium text-neutral-600">{item.payload.exception_date}</strong>
+                      <span className="text-neutral-500">
                         {timeSpan(item.payload.start_local_time, item.payload.end_local_time)} ·{' '}
                         {item.payload.reason || item.payload.exception_type}
                       </span>
@@ -604,7 +607,7 @@ export function AvailabilityPage() {
                 ))}
               </div>
             ) : (
-              <p className="mt-5 text-sm text-slate-400">No upcoming exceptions.</p>
+              <p className="mt-5 text-sm text-neutral-500">No upcoming exceptions.</p>
             )}
           </Card>
         </>

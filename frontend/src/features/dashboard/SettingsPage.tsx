@@ -32,7 +32,7 @@ export function SettingsPage() {
   if (currentUser.data?.role === 'instructor') return <AppearancePage />;
   if (!currentUser.data)
     return (
-      <div role="status" className="grid min-h-64 place-items-center text-sm text-slate-500">
+      <div role="status" className="grid min-h-64 place-items-center text-sm text-neutral-500">
         Loading settings…
       </div>
     );
@@ -66,24 +66,24 @@ function AcademySettingsPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <header>
         <h2 className="text-2xl font-semibold tracking-tight text-heading">Settings</h2>
-        <p className="mt-1 text-sm text-slate-500">Choose your appearance and set the academy’s booking defaults.</p>
+        <p className="mt-1 text-sm text-neutral-500">Choose your appearance and set the academy’s booking defaults.</p>
       </header>
 
       <AppearancePage />
 
       <Card className="p-5 sm:p-6">
-        <h3 className="font-semibold text-slate-900">Demo class defaults</h3>
-        <p className="mt-1 text-sm text-slate-500">
+        <h3 className="font-semibold text-neutral-900">Demo class defaults</h3>
+        <p className="mt-1 text-sm text-neutral-500">
           Changes are saved in the database and apply to new availability searches.
         </p>
         {query.isError && (
-          <p role="alert" className="mt-4 text-sm text-rose-700">
+          <p role="alert" className="mt-4 text-sm text-danger-700">
             Settings could not be loaded.
           </p>
         )}
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           {fields.map(({ key, label, min, max }) => (
-            <label key={key} className="text-sm font-medium text-slate-700">
+            <label key={key} className="text-sm font-medium text-neutral-700">
               {label}
               <input
                 type="number"
@@ -91,18 +91,18 @@ function AcademySettingsPage() {
                 max={max}
                 value={values[key]}
                 onChange={(event) => change(key, event.target.value)}
-                className="mt-2 block w-full rounded-lg border border-slate-300 px-3 py-2.5"
+                className="mt-2 block w-full rounded-lg border border-neutral-300 px-3 py-2.5"
               />
             </label>
           ))}
         </div>
         {result.isError && (
-          <p role="alert" className="mt-4 text-sm text-rose-700">
+          <p role="alert" className="mt-4 text-sm text-danger-700">
             Settings could not be saved. Check the allowed ranges and try again.
           </p>
         )}
         {result.isSuccess && (
-          <p role="status" className="mt-4 text-sm text-emerald-700">
+          <p role="status" className="mt-4 text-sm text-success-700">
             Settings saved.
           </p>
         )}
@@ -119,13 +119,13 @@ function AcademySettingsPage() {
       </Card>
 
       <Card className="p-5 sm:p-6">
-        <h3 className="font-semibold text-slate-900">Booking notifications</h3>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+        <h3 className="font-semibold text-neutral-900">Booking notifications</h3>
+        <p className="mt-2 text-sm leading-6 text-neutral-600">
           Booking emails are queued with the appointment and sent by the background worker. Local Docker mail is
           captured in Mailpit at <span className="font-medium">http://localhost:8025</span>; production uses the SMTP
           server configured for the backend.
         </p>
-        <p className="mt-3 text-xs leading-5 text-slate-500">
+        <p className="mt-3 text-xs leading-5 text-neutral-500">
           The academy coordinates meeting details separately. Google Calendar and automatic meeting links are not
           enabled in this version.
         </p>

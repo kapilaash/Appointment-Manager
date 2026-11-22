@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 const adminEmail = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
 const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'ChessTestAccount!2026';
 const instructorPassword = 'Instructor!Test2026';
-const mailpitMessagesUrl = process.env.MAILPIT_MESSAGES_URL ?? 'http://127.0.0.1:8025/api/v1/messages';
+const mailpitSearchUrl = `${process.env.MAILPIT_URL ?? 'http://127.0.0.1:8025'}/api/v1/search`;
 
 async function signIn(page: import('@playwright/test').Page, email: string, password: string) {
   page.setDefaultNavigationTimeout(90_000);
@@ -11,7 +11,8 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await page.getByLabel('Email address').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByText('Academy workspace')).toBeVisible();
+  // The first sign-in after a dev-server restart also compiles the workspace bundle.
+  await expect(page.getByText('Academy workspace')).toBeVisible({ timeout: 30_000 });
 }
 
 async function expectTheme(
@@ -41,11 +42,12 @@ async function resetTheme(page: import('@playwright/test').Page) {
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 }
 
-async function mailCount(page: import('@playwright/test').Page) {
-  const response = await page.request.get(mailpitMessagesUrl);
+/** Messages delivered to one address. Mailpit prunes old mail, so global totals are unreliable. */
+async function mailsTo(page: import('@playwright/test').Page, address: string) {
+  const response = await page.request.get(mailpitSearchUrl, { params: { query: `to:"${address}"` } });
   if (!response.ok()) return 0;
-  const data = (await response.json()) as { total?: number; messages?: unknown[] };
-  return data.total ?? data.messages?.length ?? 0;
+  const data = (await response.json()) as { messages_count?: number; messages?: unknown[] };
+  return data.messages_count ?? data.messages?.length ?? 0;
 }
 
 test('login remains usable on a phone viewport with keyboard navigation', async ({ page }) => {
@@ -82,17 +84,17 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await signIn(adminPage, adminEmail, adminPassword);
   await resetTheme(adminPage);
   await expectTheme(adminPage, 'light', 'rgb(248, 250, 252)', 'rgb(255, 255, 255)');
-  const initialMailCount = await mailCount(adminPage);
 
   const uniqueId = Date.now();
   const instructorEmail = `coach-${uniqueId}@example.com`;
   const instructorName = `E2E Coach ${uniqueId}`;
   const studentName = `Chess Student ${uniqueId}`;
+  const studentEmail = `student-${uniqueId}@example.com`;
   await adminPage.getByRole('link', { name: 'Coach accounts' }).click();
   await adminPage.getByLabel('Coach email').fill(instructorEmail);
   await adminPage.getByRole('button', { name: 'Create invite' }).click();
   await expect(adminPage.getByText(instructorEmail)).toBeVisible();
-  await expect.poll(() => mailCount(adminPage), { timeout: 30_000 }).toBeGreaterThanOrEqual(initialMailCount + 1);
+  await expect.poll(() => mailsTo(adminPage, instructorEmail), { timeout: 30_000 }).toBeGreaterThanOrEqual(1); // invitation
 
   const registrationUrl = await adminPage.getByLabel('One-time coach registration link').inputValue();
   const instructor = await browser.newPage();
@@ -111,7 +113,7 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await instructor.getByLabel('Account email').fill(instructorEmail);
   await instructor.getByRole('button', { name: 'Send reset link' }).click();
   await expect(instructor.getByRole('status')).toContainText('password reset instructions will be sent');
-  await expect.poll(() => mailCount(adminPage), { timeout: 30_000 }).toBeGreaterThanOrEqual(initialMailCount + 2);
+  await expect.poll(() => mailsTo(adminPage, instructorEmail), { timeout: 30_000 }).toBeGreaterThanOrEqual(2); // + reset link
 
   await adminPage.getByRole('button', { name: 'Account menu' }).click();
   await adminPage.getByRole('menuitem', { name: /Sign out/ }).click();
@@ -184,7 +186,7 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
     .click();
   await adminPage.getByRole('button', { name: 'Continue' }).click();
   await adminPage.getByLabel('Student name').fill(studentName);
-  await adminPage.getByLabel('Contact email').fill(`student-${uniqueId}@example.com`);
+  await adminPage.getByLabel('Contact email').fill(studentEmail);
   await adminPage.getByLabel("Student's country").selectOption('US');
   await adminPage.getByLabel('Student time zone').selectOption('America/Los_Angeles');
   await adminPage.getByRole('button', { name: 'Review booking' }).click();
@@ -201,7 +203,7 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await expect(
     adminPage.getByText('The meeting link is included in the booking details and notifications.'),
   ).toBeVisible();
-  await expect.poll(() => mailCount(adminPage), { timeout: 30_000 }).toBeGreaterThanOrEqual(initialMailCount + 5);
+  await expect.poll(() => mailsTo(adminPage, studentEmail), { timeout: 30_000 }).toBeGreaterThanOrEqual(1); // booked
 
   await adminPage.goto(`/calendar?appointment=${booking.id}`);
   await expectTheme(adminPage, 'classic', 'rgb(247, 243, 232)', 'rgb(255, 253, 246)');
@@ -260,7 +262,7 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await adminPage.getByLabel('Reason for rescheduling').fill('The family requested another day.');
   await adminPage.getByRole('button', { name: 'Confirm new time' }).click();
   await expect(adminPage.getByText('Demo rescheduled. The coach and client were sent an update.')).toBeVisible();
-  await expect.poll(() => mailCount(adminPage), { timeout: 30_000 }).toBeGreaterThanOrEqual(initialMailCount + 8);
+  await expect.poll(() => mailsTo(adminPage, studentEmail), { timeout: 30_000 }).toBeGreaterThanOrEqual(2); // rescheduled
 
   await adminPage.getByRole('link', { name: 'Appointments' }).click();
   await appointmentRow.getByRole('button', { name: 'Notifications' }).click();
@@ -269,7 +271,7 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await adminPage.getByLabel('Reason for cancellation').fill('The family no longer needs the demo.');
   await adminPage.getByRole('button', { name: 'Cancel demo class' }).click();
   await expect(appointmentRow.getByText('Cancelled', { exact: true })).toBeVisible();
-  await expect.poll(() => mailCount(adminPage), { timeout: 30_000 }).toBeGreaterThanOrEqual(initialMailCount + 11);
+  await expect.poll(() => mailsTo(adminPage, studentEmail), { timeout: 30_000 }).toBeGreaterThanOrEqual(3); // cancelled
 
   await adminPage.getByRole('link', { name: 'Students' }).click();
   await expectTheme(adminPage, 'classic', 'rgb(247, 243, 232)', 'rgb(255, 253, 246)');

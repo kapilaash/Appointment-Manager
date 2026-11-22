@@ -211,7 +211,7 @@ export function CalendarPage() {
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-heading">Class calendar</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-neutral-500">
             Hover a class for a quick preview, or click/tap it to open details. Busy days show a “more” list so every
             booking stays selectable.
           </p>
@@ -221,7 +221,7 @@ export function CalendarPage() {
             aria-label="Filter calendar by instructor"
             value={instructorId}
             onChange={(event) => setInstructorId(event.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-surface px-3 text-sm sm:w-auto"
+            className="w-full rounded-lg border border-neutral-300 bg-surface px-3 text-sm sm:w-auto"
           >
             <option value="">All instructors</option>
             {instructors.data?.map((item) => (
@@ -234,7 +234,7 @@ export function CalendarPage() {
             aria-label="Filter calendar by status"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-surface px-3 text-sm sm:w-auto"
+            className="w-full rounded-lg border border-neutral-300 bg-surface px-3 text-sm sm:w-auto"
           >
             <option value="">All statuses</option>
             <option value="confirmed">Confirmed</option>
@@ -245,18 +245,18 @@ export function CalendarPage() {
       </div>
 
       {notice && (
-        <p role="status" className="ui-enter rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+        <p role="status" className="ui-enter rounded-lg bg-success-50 p-3 text-sm text-success-800">
           {notice}
         </p>
       )}
       {appointmentId && focusedAppointment.isLoading && (
         <Card className="p-5">
-          <p className="text-sm text-slate-500">Loading demo details…</p>
+          <p className="text-sm text-neutral-500">Loading demo details…</p>
         </Card>
       )}
       {appointmentId && focusedAppointment.isError && (
         <Card className="p-5">
-          <p role="alert" className="text-sm text-rose-700">
+          <p role="alert" className="text-sm text-danger-700">
             This demo could not be loaded. Return to the appointments list and try again.
           </p>
           <Button variant="secondary" className="mt-3" onClick={closeFocusedAppointment}>
@@ -267,7 +267,7 @@ export function CalendarPage() {
       )}
       {currentUser.isSuccess && isRescheduling && !canReschedule && (
         <Card className="p-5">
-          <p role="alert" className="text-sm text-rose-700">
+          <p role="alert" className="text-sm text-danger-700">
             Only an administrator can reschedule demo classes.
           </p>
           <Button variant="secondary" className="mt-3" onClick={closeFocusedAppointment}>
@@ -280,18 +280,18 @@ export function CalendarPage() {
         <Card className="ui-enter p-5 sm:p-6">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Demo details</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-accent-700">Demo details</p>
               <h3 className="mt-1 text-lg font-semibold text-heading">
                 {appointment.student?.name ?? 'Deleted student'} with {appointment.instructor_name}
               </h3>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-neutral-600">
                 {formatInTimeZone(
                   new Date(appointment.starts_at),
                   appointment.instructor_timezone,
                   'EEEE, MMMM d, yyyy · h:mm a zzz',
                 )}
               </p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-neutral-500">
                 Coach time zone: {appointment.instructor_timezone}
                 {appointment.student?.email ? ` · ${appointment.student.email}` : ''}
               </p>
@@ -300,19 +300,19 @@ export function CalendarPage() {
                   href={appointment.meeting_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-action px-4 text-sm font-semibold text-on-action shadow-sm hover:bg-action-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                  className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent shadow-sm hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600"
                 >
                   <ExternalLink size={16} />
                   Open meeting link
                 </a>
               )}
               {appointment.cancellation_reason && (
-                <p className="mt-3 text-sm text-slate-600">
+                <p className="mt-3 text-sm text-neutral-600">
                   <strong>Cancellation reason:</strong> {appointment.cancellation_reason}
                 </p>
               )}
               {appointment.reschedule_reason && (
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-2 text-sm text-neutral-600">
                   <strong>Latest reschedule reason:</strong> {appointment.reschedule_reason}
                 </p>
               )}
@@ -359,25 +359,25 @@ export function CalendarPage() {
             <X size={16} />
             Cancel rescheduling
           </Button>
-          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent-700">
             {needsApproval ? 'Request a new time' : 'Reschedule demo'}
           </p>
           <h3 className="mt-1 text-lg font-semibold text-heading">
             {appointment.student?.name ?? 'Deleted student'} with {appointment.instructor_name}
           </h3>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-neutral-600">
             Choose a new time in {appointment.instructor_timezone}.{' '}
             {needsApproval
               ? ' An administrator must approve the new time; the current booking stays active until then.'
               : ' The current booking will remain active until you confirm.'}
           </p>
           {appointment.status !== 'confirmed' ? (
-            <p role="alert" className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+            <p role="alert" className="mt-4 rounded-lg bg-warning-50 p-3 text-sm text-warning-900">
               Only confirmed demos can be rescheduled.
             </p>
           ) : (
             <div className="mt-5 grid gap-5 lg:grid-cols-[220px_1fr]">
-              <label className="text-sm font-medium text-slate-700">
+              <label className="text-sm font-medium text-neutral-700">
                 New date
                 <input
                   aria-label="New demo date"
@@ -388,17 +388,17 @@ export function CalendarPage() {
                     setRescheduleDay(event.target.value);
                     setSelectedSlot('');
                   }}
-                  className="mt-2 block w-full rounded-lg border border-slate-300 bg-surface px-3 py-2.5"
+                  className="mt-2 block w-full rounded-lg border border-neutral-300 bg-surface px-3 py-2.5"
                 />
               </label>
               <div>
-                <h4 className="text-sm font-medium text-slate-700">Available times</h4>
+                <h4 className="text-sm font-medium text-neutral-700">Available times</h4>
                 {slots.isFetching ? (
-                  <p role="status" className="mt-2 text-sm text-slate-500">
+                  <p role="status" className="mt-2 text-sm text-neutral-500">
                     Finding available times…
                   </p>
                 ) : slots.isError ? (
-                  <div role="alert" className="mt-2 text-sm text-rose-700">
+                  <div role="alert" className="mt-2 text-sm text-danger-700">
                     <p>Availability could not be loaded.</p>
                     <Button variant="secondary" className="mt-2" onClick={() => void slots.refetch()}>
                       Retry
@@ -411,7 +411,7 @@ export function CalendarPage() {
                         key={value}
                         type="button"
                         onClick={() => setSelectedSlot(value)}
-                        className={`min-h-11 rounded-lg border px-3 py-2.5 text-sm font-semibold ${selectedSlot === value ? 'border-indigo-600 bg-action text-on-action' : 'border-slate-200 text-indigo-700 hover:border-indigo-400 hover:bg-indigo-50'}`}
+                        className={`min-h-11 rounded-lg border px-3 py-2.5 text-sm font-semibold ${selectedSlot === value ? 'border-accent-600 bg-accent text-on-accent' : 'border-neutral-200 text-accent-700 hover:border-accent-400 hover:bg-accent-50'}`}
                       >
                         <Clock3 className="mr-1 inline" size={14} />
                         {new Date(value).toLocaleTimeString([], {
@@ -423,14 +423,14 @@ export function CalendarPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-2 text-sm text-slate-500">No open slots on this date.</p>
+                  <p className="mt-2 text-sm text-neutral-500">No open slots on this date.</p>
                 )}
               </div>
             </div>
           )}
           {appointment.status === 'confirmed' && (
             <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-neutral-700">
                 Reason for rescheduling
                 <textarea
                   required
@@ -439,7 +439,7 @@ export function CalendarPage() {
                   value={reason}
                   onChange={(event) => setReason(event.target.value)}
                   placeholder="For example, the coach is unavailable at the original time."
-                  className="mt-2 block min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+                  className="mt-2 block min-h-24 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm"
                 />
               </label>
               <Button
@@ -452,7 +452,7 @@ export function CalendarPage() {
             </div>
           )}
           {actionError && (
-            <p role="alert" className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">
+            <p role="alert" className="mt-3 rounded-lg bg-danger-50 p-3 text-sm text-danger-700">
               {actionError}
             </p>
           )}
@@ -473,47 +473,47 @@ export function CalendarPage() {
         onConfirm={() => void confirmComplete()}
       >
         {completeError && (
-          <p role="alert" className="text-sm text-rose-700">
+          <p role="alert" className="text-sm text-danger-700">
             {completeError}
           </p>
         )}
       </Dialog>
 
       {appointments.isError && (
-        <p role="alert" className="mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">
+        <p role="alert" className="mb-4 rounded-lg bg-danger-50 p-3 text-sm text-danger-700">
           Calendar events could not be loaded.
         </p>
       )}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <Card className="flex flex-col items-center gap-0.5 p-2 text-center sm:flex-row sm:gap-3 sm:p-4 sm:text-left">
-          <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-lg bg-indigo-50 text-indigo-700 sm:grid">
+          <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent-50 text-accent-700 sm:grid">
             <CalendarClock size={17} />
           </span>
           <div>
-            <p className="text-[11px] text-slate-500 sm:text-xs">Confirmed</p>
-            <p className="text-lg font-semibold text-slate-900">{statusCounts.confirmed}</p>
+            <p className="text-[11px] text-neutral-500 sm:text-xs">Confirmed</p>
+            <p className="text-lg font-semibold text-neutral-900">{statusCounts.confirmed}</p>
           </div>
         </Card>
         <Card className="flex flex-col items-center gap-0.5 p-2 text-center sm:flex-row sm:gap-3 sm:p-4 sm:text-left">
-          <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700 sm:grid">
+          <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-lg bg-success-50 text-success-700 sm:grid">
             <CheckCircle2 size={17} />
           </span>
           <div>
-            <p className="text-[11px] text-slate-500 sm:text-xs">Completed</p>
-            <p className="text-lg font-semibold text-slate-900">{statusCounts.completed}</p>
+            <p className="text-[11px] text-neutral-500 sm:text-xs">Completed</p>
+            <p className="text-lg font-semibold text-neutral-900">{statusCounts.completed}</p>
           </div>
         </Card>
         <Card className="flex flex-col items-center gap-0.5 p-2 text-center sm:flex-row sm:gap-3 sm:p-4 sm:text-left">
-          <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600 sm:grid">
+          <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-600 sm:grid">
             <XCircle size={17} />
           </span>
           <div>
-            <p className="text-[11px] text-slate-500 sm:text-xs">Cancelled</p>
-            <p className="text-lg font-semibold text-slate-900">{statusCounts.cancelled}</p>
+            <p className="text-[11px] text-neutral-500 sm:text-xs">Cancelled</p>
+            <p className="text-lg font-semibold text-neutral-900">{statusCounts.cancelled}</p>
           </div>
         </Card>
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-neutral-500">
         Calendar times shown in {calendarTimeZone === 'local' ? 'your device time zone' : calendarTimeZone}. New
         bookings appear automatically within 15 seconds while this page is open.
       </p>
@@ -521,7 +521,7 @@ export function CalendarPage() {
         {appointments.isError && (
           <div
             role="alert"
-            className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700"
+            className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-danger-50 p-3 text-sm text-danger-700"
           >
             Calendar events could not be loaded.
             <Button variant="secondary" onClick={() => void appointments.refetch()}>
@@ -602,35 +602,35 @@ export function CalendarPage() {
           />
         </div>
       </Card>
-      <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-500">
+      <div className="mt-4 flex flex-wrap gap-4 text-xs text-neutral-500">
         <span className="inline-flex items-center gap-2">
-          <i className="h-2.5 w-2.5 rounded-full bg-action" />
+          <i className="h-2.5 w-2.5 rounded-full bg-accent" />
           Confirmed
         </span>
         <span className="inline-flex items-center gap-2">
-          <i className="h-2.5 w-2.5 rounded-full bg-slate-400" />
+          <i className="h-2.5 w-2.5 rounded-full bg-neutral-400" />
           Cancelled
         </span>
         <span className="inline-flex items-center gap-2">
-          <i className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
+          <i className="h-2.5 w-2.5 rounded-full bg-success-600" />
           Completed
         </span>
       </div>
       {hoverPreview && (
         <div
           role="tooltip"
-          className="pointer-events-none fixed z-[70] w-72 rounded-xl border border-slate-200 bg-surface p-4 shadow-2xl"
+          className="pointer-events-none fixed z-[70] w-72 rounded-xl border border-neutral-200 bg-surface p-4 shadow-2xl"
           style={{ left: hoverPreview.left, top: hoverPreview.top }}
         >
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Booking preview</span>
-            <span className="rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-semibold capitalize text-indigo-800">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Booking preview</span>
+            <span className="rounded-full bg-accent-50 px-2 py-1 text-[10px] font-semibold capitalize text-accent-800">
               {hoverPreview.status}
             </span>
           </div>
           <p className="mt-2 text-sm font-semibold text-heading">{hoverPreview.title}</p>
-          <p className="mt-1 text-xs text-slate-600">{hoverPreview.when}</p>
-          <p className="mt-3 border-t border-slate-100 pt-2 text-[11px] text-slate-500">
+          <p className="mt-1 text-xs text-neutral-600">{hoverPreview.when}</p>
+          <p className="mt-3 border-t border-neutral-100 pt-2 text-[11px] text-neutral-500">
             Click or press Enter to open details
           </p>
         </div>

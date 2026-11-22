@@ -117,18 +117,18 @@ export function CoachAdminPage() {
   return (
     <div className="space-y-7">
       <header>
-        <p className="text-sm font-semibold text-indigo-700">Administrator workspace</p>
+        <p className="text-sm font-semibold text-accent-700">Administrator workspace</p>
         <h1 className="mt-1 text-2xl font-semibold text-heading">Coach accounts</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
           Invite coaches, manage account access, and issue password resets. Links are emailed automatically and remain
           available here to share directly if needed. Passwords are never visible to admins.
         </p>
       </header>
 
-      <section className="rounded-xl border border-slate-200 bg-surface p-5 shadow-sm sm:p-6">
+      <section className="rounded-xl border border-neutral-200 bg-surface p-5 shadow-sm sm:p-6">
         <div className="flex items-center gap-2">
-          <UserPlus size={18} className="text-indigo-600" />
-          <h2 className="font-semibold text-slate-900">Invite a coach</h2>
+          <UserPlus size={18} className="text-accent-600" />
+          <h2 className="font-semibold text-neutral-900">Invite a coach</h2>
         </div>
         <form onSubmit={createInvite} className="mt-4 flex flex-col gap-3 sm:flex-row">
           <label className="sr-only" htmlFor="coach-email">
@@ -141,11 +141,11 @@ export function CoachAdminPage() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="coach@example.com"
-            className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+            className="min-w-0 flex-1 rounded-lg border border-neutral-300 px-3 py-2.5 text-sm"
           />
           <button
             disabled={inviteResult.isLoading}
-            className="rounded-lg bg-action px-4 py-2.5 text-sm font-semibold text-on-action disabled:opacity-50"
+            className="rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent disabled:opacity-50"
           >
             {inviteResult.isLoading ? 'Creating…' : 'Create invite'}
           </button>
@@ -157,19 +157,19 @@ export function CoachAdminPage() {
               readOnly
               value={inviteLink}
               onFocus={(event) => event.currentTarget.select()}
-              className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs"
+              className="min-w-0 flex-1 rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-2 text-xs"
             />
             <button
               type="button"
               onClick={() => void copyLink(inviteLink)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium"
             >
               <Copy size={15} />
               Copy link
             </button>
           </div>
         )}
-        <p className="mt-3 text-xs leading-5 text-slate-500">
+        <p className="mt-3 text-xs leading-5 text-neutral-500">
           {inviteEmailSent
             ? 'This registration link was emailed, expires after 48 hours, and works once. You can also copy and share it privately.'
             : 'This registration link expires after 48 hours and works once. Email delivery failed, so copy and share it privately.'}
@@ -177,26 +177,26 @@ export function CoachAdminPage() {
       </section>
 
       {resetLink && (
-        <section className="rounded-xl border border-amber-200 bg-amber-50 p-5">
-          <h2 className="font-semibold text-amber-950">Password reset link</h2>
+        <section className="rounded-xl border border-warning-200 bg-warning-50 p-5">
+          <h2 className="font-semibold text-warning-950">Password reset link</h2>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
               aria-label="One-time password reset link"
               readOnly
               value={resetLink}
               onFocus={(event) => event.currentTarget.select()}
-              className="min-w-0 flex-1 rounded-lg border border-amber-300 bg-surface px-3 py-2 text-xs"
+              className="min-w-0 flex-1 rounded-lg border border-warning-300 bg-surface px-3 py-2 text-xs"
             />
             <button
               type="button"
               onClick={() => void copyLink(resetLink)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-300 bg-surface px-3 py-2 text-sm font-medium"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-warning-300 bg-surface px-3 py-2 text-sm font-medium"
             >
               <Copy size={15} />
               Copy link
             </button>
           </div>
-          <p className="mt-2 text-xs text-amber-900">
+          <p className="mt-2 text-xs text-warning-900">
             {resetEmailSent
               ? 'The reset link was emailed, expires after 30 minutes, and works once. You can copy it to share privately.'
               : 'Email delivery failed. The reset link expires after 30 minutes and works once; copy it to share privately.'}
@@ -205,70 +205,72 @@ export function CoachAdminPage() {
       )}
 
       {notice && (
-        <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+        <p role="status" className="rounded-lg bg-success-50 p-3 text-sm text-success-800">
           {notice}
         </p>
       )}
       {error && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="rounded-lg bg-danger-50 p-3 text-sm text-danger-700">
           {error}
         </p>
       )}
       {resetResult.isError && !error && (
-        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="rounded-lg bg-danger-50 p-3 text-sm text-danger-700">
           Reset link could not be created.
         </p>
       )}
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-sm">
-        <div className="border-b border-slate-200 px-5 py-4">
-          <h2 className="font-semibold text-slate-900">Coaches</h2>
+      <section className="overflow-hidden rounded-xl border border-neutral-200 bg-surface shadow-sm">
+        <div className="border-b border-neutral-200 px-5 py-4">
+          <h2 className="font-semibold text-neutral-900">Coaches</h2>
         </div>
         {coaches.isLoading ? (
-          <p className="p-5 text-sm text-slate-500">Loading coach accounts…</p>
+          <p className="p-5 text-sm text-neutral-500">Loading coach accounts…</p>
         ) : coaches.isError ? (
           <div className="flex flex-col items-start gap-3 p-5">
-            <p className="text-sm text-red-700">Could not load coach accounts. {describeRequestError(coaches.error)}</p>
+            <p className="text-sm text-danger-700">
+              Could not load coach accounts. {describeRequestError(coaches.error)}
+            </p>
             <button
               type="button"
               onClick={() => void coaches.refetch()}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
+              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700"
             >
               Retry
             </button>
           </div>
         ) : coaches.data?.length ? (
           <>
-            <div className="divide-y divide-slate-100 2xl:hidden">
+            <div className="divide-y divide-neutral-100 2xl:hidden">
               {coaches.data.map((coach) => (
                 <article key={coach.id} className="space-y-4 p-4 sm:p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="truncate font-semibold text-slate-900">{coach.display_name}</h3>
-                      <p className="mt-0.5 truncate text-xs text-slate-500">{coach.full_name}</p>
+                      <h3 className="truncate font-semibold text-neutral-900">{coach.display_name}</h3>
+                      <p className="mt-0.5 truncate text-xs text-neutral-500">{coach.full_name}</p>
                     </div>
                     <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${coach.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${coach.is_active ? 'bg-success-50 text-success-700' : 'bg-neutral-100 text-neutral-600'}`}
                     >
                       {coach.is_active ? 'Active' : 'Deactivated'}
                     </span>
                   </div>
-                  <div className="break-all text-sm text-slate-700">
+                  <div className="break-all text-sm text-neutral-700">
                     {coach.email}
                     {!coach.email_valid && (
-                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900">
+                      <span className="ml-2 rounded-full bg-warning-100 px-2 py-1 text-xs font-medium text-warning-900">
                         Invalid email
                       </span>
                     )}
                   </div>
-                  <dl className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3 text-sm">
+                  <dl className="grid grid-cols-2 gap-3 rounded-xl bg-neutral-50 p-3 text-sm">
                     <div>
-                      <dt className="text-xs text-slate-500">Country</dt>
-                      <dd className="mt-1 font-medium text-slate-800">{countryLabel(coach.country_code)}</dd>
+                      <dt className="text-xs text-neutral-500">Country</dt>
+                      <dd className="mt-1 font-medium text-neutral-800">{countryLabel(coach.country_code)}</dd>
                     </div>
                     <div className="min-w-0">
-                      <dt className="text-xs text-slate-500">Time zone</dt>
-                      <dd className="mt-1 break-words font-medium text-slate-800">{coach.timezone}</dd>
+                      <dt className="text-xs text-neutral-500">Time zone</dt>
+                      <dd className="mt-1 break-words font-medium text-neutral-800">{coach.timezone}</dd>
                     </div>
                   </dl>
                   <div className="grid grid-cols-2 gap-2">
@@ -285,7 +287,7 @@ export function CoachAdminPage() {
                     <Button
                       type="button"
                       variant={coach.is_active ? 'ghost' : 'secondary'}
-                      className={`w-full px-2 text-xs ${coach.is_active ? 'text-rose-700' : ''}`}
+                      className={`w-full px-2 text-xs ${coach.is_active ? 'text-danger-700' : ''}`}
                       onClick={() => setPendingCoach(coach)}
                     >
                       <UserX size={15} />
@@ -297,7 +299,7 @@ export function CoachAdminPage() {
             </div>
             <div className="hidden overflow-x-auto 2xl:block">
               <table className="w-full min-w-[1180px] table-fixed text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
                   <tr>
                     <th className="w-[18%] px-5 py-3">Coach</th>
                     <th className="w-[25%] px-5 py-3">Email</th>
@@ -306,14 +308,14 @@ export function CoachAdminPage() {
                     <th className="w-[28%] px-5 py-3">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-neutral-100">
                   {coaches.data.map((coach) => (
                     <tr key={coach.id} className="h-[76px]">
                       <td className="px-5 py-4">
-                        <div className="font-medium text-slate-900">{coach.display_name}</div>
-                        <div className="text-xs text-slate-500">{coach.full_name}</div>
+                        <div className="font-medium text-neutral-900">{coach.display_name}</div>
+                        <div className="text-xs text-neutral-500">{coach.full_name}</div>
                       </td>
-                      <td className="overflow-hidden whitespace-nowrap px-5 py-4 text-slate-700">
+                      <td className="overflow-hidden whitespace-nowrap px-5 py-4 text-neutral-700">
                         <div className="flex min-w-0 items-center gap-2">
                           <span className="truncate" title={coach.email}>
                             {coach.email}
@@ -322,16 +324,16 @@ export function CoachAdminPage() {
                             <span
                               title="This account email is invalid; password reset is unavailable until corrected."
                               aria-label="Invalid email on account"
-                              className="shrink-0 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900"
+                              className="shrink-0 rounded-full bg-warning-100 px-2 py-1 text-xs font-medium text-warning-900"
                             >
                               Invalid
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="overflow-hidden px-5 py-4 text-slate-600">
+                      <td className="overflow-hidden px-5 py-4 text-neutral-600">
                         <span
-                          className="block truncate font-medium text-slate-700"
+                          className="block truncate font-medium text-neutral-700"
                           title={coach.country_code ?? 'Country not configured'}
                         >
                           {coach.country_code
@@ -346,7 +348,7 @@ export function CoachAdminPage() {
                       </td>
                       <td className="whitespace-nowrap px-5 py-4">
                         <span
-                          className={`inline-flex w-[5.5rem] justify-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${coach.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}
+                          className={`inline-flex w-[5.5rem] justify-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${coach.is_active ? 'bg-success-50 text-success-700' : 'bg-neutral-100 text-neutral-600'}`}
                         >
                           {coach.is_active ? 'Active' : 'Deactivated'}
                         </span>
@@ -360,7 +362,7 @@ export function CoachAdminPage() {
                             title={
                               !coach.email_valid ? 'Correct the account email before issuing a reset link.' : undefined
                             }
-                            className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex items-center gap-1 rounded-md border border-neutral-300 px-2.5 py-1.5 text-xs font-medium text-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <KeyRound size={13} />
                             {resetResult.isLoading ? 'Creating…' : 'Reset link'}
@@ -368,7 +370,7 @@ export function CoachAdminPage() {
                           <button
                             type="button"
                             onClick={() => setPendingCoach(coach)}
-                            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700"
+                            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-neutral-300 px-2.5 py-1.5 text-xs font-medium text-neutral-700"
                           >
                             <UserX size={13} />
                             {coach.is_active ? 'Deactivate' : 'Activate'}
@@ -383,8 +385,8 @@ export function CoachAdminPage() {
           </>
         ) : (
           <div className="p-8 text-center">
-            <p className="font-medium text-slate-800">No coach accounts yet</p>
-            <p className="mt-1 text-sm text-slate-500">Create an invitation above to let a coach register.</p>
+            <p className="font-medium text-neutral-800">No coach accounts yet</p>
+            <p className="mt-1 text-sm text-neutral-500">Create an invitation above to let a coach register.</p>
           </div>
         )}
       </section>

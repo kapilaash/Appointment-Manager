@@ -19,14 +19,14 @@ export function PasswordField({ label, hint, withIcon = false, className, ...pro
   const [visible, setVisible] = useState(false);
   return (
     <div className={className}>
-      <label htmlFor={id} className="block text-sm font-semibold text-slate-800">
+      <label htmlFor={id} className="block text-sm font-semibold text-neutral-800">
         {label}
       </label>
       <div className="relative mt-2">
         {withIcon && (
           <Lock
             aria-hidden="true"
-            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500"
           />
         )}
         <input
@@ -36,7 +36,7 @@ export function PasswordField({ label, hint, withIcon = false, className, ...pro
           autoCapitalize="none"
           aria-describedby={hint ? hintId : undefined}
           className={cn(
-            'block min-h-12 w-full rounded-xl border border-slate-300 bg-surface py-3 pr-20 text-base text-heading shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/15',
+            'block min-h-12 w-full rounded-xl border border-neutral-300 bg-surface py-3 pr-20 text-base text-heading shadow-sm transition focus:border-accent-500 focus:outline-none focus:ring-4 focus:ring-accent-500/15',
             withIcon ? 'pl-11' : 'pl-3.5',
           )}
           {...props}
@@ -46,14 +46,14 @@ export function PasswordField({ label, hint, withIcon = false, className, ...pro
           onClick={() => setVisible(!visible)}
           aria-controls={id}
           aria-pressed={visible}
-          className="absolute right-1.5 top-1/2 flex min-h-9 min-w-0 -translate-y-1/2 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          className="absolute right-1.5 top-1/2 flex min-h-9 min-w-0 -translate-y-1/2 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
         >
           {visible ? <EyeOff size={14} aria-hidden="true" /> : <Eye size={14} aria-hidden="true" />}
           {visible ? 'Hide' : 'Show'}
         </button>
       </div>
       {hint && (
-        <p id={hintId} className="mt-1.5 text-xs leading-5 text-slate-500">
+        <p id={hintId} className="mt-1.5 text-xs leading-5 text-neutral-500">
           {hint}
         </p>
       )}

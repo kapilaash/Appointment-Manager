@@ -28,7 +28,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
   const Icon = toast.tone === 'success' ? CheckCircle2 : Info;
   return (
     <div
-      className="toast-enter pointer-events-auto flex w-full items-start gap-3 rounded-xl border border-slate-200 bg-surface p-3.5 text-sm text-slate-800 shadow-lifted"
+      className="toast-enter pointer-events-auto flex w-full items-start gap-3 rounded-xl border border-neutral-200 bg-surface p-3.5 text-sm text-neutral-800 shadow-lifted"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -37,14 +37,14 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
       <Icon
         size={18}
         aria-hidden="true"
-        className={toast.tone === 'success' ? 'mt-0.5 shrink-0 text-emerald-600' : 'mt-0.5 shrink-0 text-indigo-600'}
+        className={toast.tone === 'success' ? 'mt-0.5 shrink-0 text-success-600' : 'mt-0.5 shrink-0 text-accent-600'}
       />
       <p className="flex-1 leading-5">{toast.message}</p>
       <button
         type="button"
         onClick={() => onDismiss(toast.id)}
         aria-label="Dismiss notification"
-        className="-m-1 grid h-8 min-h-0 w-8 min-w-0 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+        className="-m-1 grid h-8 min-h-0 w-8 min-w-0 shrink-0 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
       >
         <X size={15} aria-hidden="true" />
       </button>

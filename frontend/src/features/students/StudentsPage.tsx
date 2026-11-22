@@ -29,19 +29,19 @@ export function StudentsPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight text-heading">Students and families</h2>
-        <p className="mt-1 text-sm text-slate-500">Contact details used for demo class coordination.</p>
+        <p className="mt-1 text-sm text-neutral-500">Contact details used for demo class coordination.</p>
       </div>
-      <p className="rounded-lg border border-slate-200 bg-surface p-4 text-sm leading-6 text-slate-600">
+      <p className="rounded-lg border border-neutral-200 bg-surface p-4 text-sm leading-6 text-neutral-600">
         Deleting a student removes their contact details. Past bookings stay in the academy record with identifying
         information removed; students with active or future demos must be handled first.
       </p>
       {notice && (
-        <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+        <p role="status" className="rounded-lg bg-success-50 p-3 text-sm text-success-800">
           {notice}
         </p>
       )}
       {query.isError && (
-        <p role="alert" className="rounded-lg bg-rose-50 p-4 text-sm text-rose-700">
+        <p role="alert" className="rounded-lg bg-danger-50 p-4 text-sm text-danger-700">
           Could not load student records.
         </p>
       )}
@@ -49,33 +49,33 @@ export function StudentsPage() {
         {query.isLoading ? (
           <div className="space-y-3 p-5">
             {[0, 1, 2].map((item) => (
-              <div key={item} className="h-14 animate-pulse rounded-lg bg-slate-100" />
+              <div key={item} className="h-14 animate-pulse rounded-lg bg-neutral-100" />
             ))}
           </div>
         ) : query.data?.length ? (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-neutral-100">
             {query.data.map((student) => (
               <article
                 key={student.id}
                 className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-700">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-50 text-accent-700">
                     <Users size={18} />
                   </span>
                   <div className="min-w-0">
-                    <p className="font-medium text-slate-900">{student.name}</p>
-                    <p className="break-all text-sm text-slate-500">
+                    <p className="font-medium text-neutral-900">{student.name}</p>
+                    <p className="break-all text-sm text-neutral-500">
                       {student.parent_name ? `${student.parent_name} · ` : ''}
                       {student.email}
                       {student.phone ? ` · ${student.phone}` : ''}
                     </p>
-                    <p className="mt-0.5 break-words text-xs text-slate-400">{student.timezone}</p>
+                    <p className="mt-0.5 break-words text-xs text-neutral-500">{student.timezone}</p>
                   </div>
                 </div>
                 <Button
                   variant="ghost"
-                  className="text-xs text-rose-700"
+                  className="text-xs text-danger-700"
                   disabled={result.isLoading}
                   onClick={() => {
                     setSelected(student);
@@ -90,9 +90,9 @@ export function StudentsPage() {
           </div>
         ) : (
           <div className="px-6 py-14 text-center">
-            <Users className="mx-auto text-slate-400" />
+            <Users className="mx-auto text-neutral-500" />
             <p className="mt-3 font-medium">No student records yet</p>
-            <p className="mt-1 text-sm text-slate-500">Student records are created when a demo is booked.</p>
+            <p className="mt-1 text-sm text-neutral-500">Student records are created when a demo is booked.</p>
           </div>
         )}
       </Card>
@@ -111,7 +111,7 @@ export function StudentsPage() {
         onConfirm={() => void confirmDelete()}
       >
         {error && (
-          <p role="alert" className="text-sm text-rose-700">
+          <p role="alert" className="text-sm text-danger-700">
             {error}
           </p>
         )}

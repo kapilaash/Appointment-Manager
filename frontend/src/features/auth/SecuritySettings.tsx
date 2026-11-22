@@ -18,7 +18,7 @@ import {
 } from './api';
 
 const codeInput =
-  'mt-2 block min-h-12 w-full rounded-xl border border-slate-300 bg-surface px-3.5 py-3 font-mono text-base tracking-widest text-heading shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/15';
+  'mt-2 block min-h-12 w-full rounded-xl border border-neutral-300 bg-surface px-3.5 py-3 font-mono text-base tracking-widest text-heading shadow-sm focus:border-accent-500 focus:outline-none focus:ring-4 focus:ring-accent-500/15';
 
 function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleDateString([], { dateStyle: 'medium' }) : null;
@@ -50,11 +50,11 @@ function ChangePasswordCard() {
 
   return (
     <Card className="p-5 sm:p-6">
-      <h3 className="flex items-center gap-2 font-semibold text-slate-900">
-        <KeyRound size={18} aria-hidden="true" className="text-indigo-600" />
+      <h3 className="flex items-center gap-2 font-semibold text-neutral-900">
+        <KeyRound size={18} aria-hidden="true" className="text-accent-600" />
         Change password
       </h3>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-neutral-500">
         You stay signed in on this device; every other device is signed out.
       </p>
       <form onSubmit={(event) => void submit(event)} className="mt-5 grid gap-4 sm:max-w-md">
@@ -85,12 +85,12 @@ function ChangePasswordCard() {
           onChange={(event) => setConfirm(event.target.value)}
         />
         {mismatch && (
-          <p role="alert" className="text-sm text-rose-700">
+          <p role="alert" className="text-sm text-danger-700">
             The new passwords do not match.
           </p>
         )}
         {error && (
-          <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">
+          <p role="alert" className="rounded-lg bg-danger-50 p-3 text-sm text-danger-700">
             {error}
           </p>
         )}
@@ -129,14 +129,17 @@ function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void 
   }
 
   return (
-    <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:p-5">
-      <p className="font-semibold text-amber-950">Save your recovery codes</p>
-      <p className="mt-1 text-sm text-amber-900">
+    <div className="mt-5 rounded-xl border border-warning-200 bg-warning-50 p-4 sm:p-5">
+      <p className="font-semibold text-warning-950">Save your recovery codes</p>
+      <p className="mt-1 text-sm text-warning-900">
         If you lose your phone, each code lets you sign in once. They are shown only now.
       </p>
       <ul aria-label="Recovery codes" className="mt-4 grid grid-cols-2 gap-2 font-mono text-sm sm:grid-cols-5">
         {codes.map((code) => (
-          <li key={code} className="rounded-lg bg-surface px-2 py-1.5 text-center text-slate-900 ring-1 ring-amber-200">
+          <li
+            key={code}
+            className="rounded-lg bg-surface px-2 py-1.5 text-center text-neutral-900 ring-1 ring-warning-200"
+          >
             {code}
           </li>
         ))}
@@ -151,7 +154,7 @@ function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void 
           Download
         </Button>
       </div>
-      <label className="mt-4 flex items-center gap-2 text-sm font-medium text-amber-950">
+      <label className="mt-4 flex items-center gap-2 text-sm font-medium text-warning-950">
         <input
           type="checkbox"
           checked={saved}
@@ -240,23 +243,23 @@ function TwoStepCard() {
     <Card className="p-5 sm:p-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
         <div>
-          <h3 className="flex items-center gap-2 font-semibold text-slate-900">
-            <Smartphone size={18} aria-hidden="true" className="text-indigo-600" />
+          <h3 className="flex items-center gap-2 font-semibold text-neutral-900">
+            <Smartphone size={18} aria-hidden="true" className="text-accent-600" />
             Two-step sign-in
           </h3>
-          <p className="mt-1 max-w-xl text-sm text-slate-500">
+          <p className="mt-1 max-w-xl text-sm text-neutral-500">
             After your password, also enter a code from an authenticator app (Google Authenticator, Microsoft
             Authenticator, 1Password…). Strongly recommended for administrators, who can see family contact details.
           </p>
         </div>
         {status &&
           (status.mfa_enabled ? (
-            <span className="inline-flex shrink-0 items-center gap-1 self-start rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+            <span className="inline-flex shrink-0 items-center gap-1 self-start rounded-full bg-success-50 px-2.5 py-1 text-xs font-semibold text-success-800">
               <ShieldCheck size={13} aria-hidden="true" />
               On since {formatDate(status.mfa_enabled_at)}
             </span>
           ) : (
-            <span className="inline-flex shrink-0 items-center gap-1 self-start rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+            <span className="inline-flex shrink-0 items-center gap-1 self-start rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-600">
               <ShieldOff size={13} aria-hidden="true" />
               Off
             </span>
@@ -270,20 +273,20 @@ function TwoStepCard() {
           <img
             src={qrImage}
             alt="QR code to add Thirumal Chess Academy to your authenticator app"
-            className="h-44 w-44 rounded-xl bg-white p-2 ring-1 ring-slate-200"
+            className="h-44 w-44 rounded-xl bg-white p-2 ring-1 ring-neutral-200"
           />
           <form onSubmit={(event) => void confirmSetup(event)}>
-            <ol className="list-inside list-decimal space-y-1 text-sm text-slate-700">
+            <ol className="list-inside list-decimal space-y-1 text-sm text-neutral-700">
               <li>Scan the QR code with your authenticator app.</li>
               <li>
                 Can’t scan? Enter this key:{' '}
-                <code className="select-all rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-900">
+                <code className="select-all rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-xs text-neutral-900">
                   {setup.secret.match(/.{1,4}/g)?.join(' ')}
                 </code>
               </li>
               <li>Type the 6-digit code the app shows.</li>
             </ol>
-            <label className="mt-4 block text-sm font-semibold text-slate-800 sm:max-w-xs">
+            <label className="mt-4 block text-sm font-semibold text-neutral-800 sm:max-w-xs">
               Code from the app
               <input
                 required
@@ -307,14 +310,14 @@ function TwoStepCard() {
         </div>
       ) : status?.mfa_enabled ? (
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <p className="w-full text-sm text-slate-600">
+          <p className="w-full text-sm text-neutral-600">
             {status.recovery_codes_remaining} unused recovery {status.recovery_codes_remaining === 1 ? 'code' : 'codes'}{' '}
             left.
           </p>
           <Button variant="secondary" onClick={() => openDialog('regenerate')}>
             Create new recovery codes
           </Button>
-          <Button variant="ghost" className="text-rose-700" onClick={() => openDialog('disable')}>
+          <Button variant="ghost" className="text-danger-700" onClick={() => openDialog('disable')}>
             Turn off
           </Button>
         </div>
@@ -324,7 +327,7 @@ function TwoStepCard() {
         </Button>
       )}
       {error && !dialog && (
-        <p role="alert" className="mt-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">
+        <p role="alert" className="mt-4 rounded-lg bg-danger-50 p-3 text-sm text-danger-700">
           {error}
         </p>
       )}
@@ -352,7 +355,7 @@ function TwoStepCard() {
             onChange={(event) => setPassword(event.target.value)}
           />
           {dialog === 'disable' && (
-            <label className="block text-sm font-semibold text-slate-800">
+            <label className="block text-sm font-semibold text-neutral-800">
               Authenticator or recovery code
               <input
                 autoComplete="one-time-code"
@@ -363,7 +366,7 @@ function TwoStepCard() {
             </label>
           )}
           {error && (
-            <p role="alert" className="text-sm text-rose-700">
+            <p role="alert" className="text-sm text-danger-700">
               {error}
             </p>
           )}
@@ -385,7 +388,7 @@ export function SecuritySettings() {
         <h2 id="security-heading" className="text-xl font-semibold text-heading">
           Password & security
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-neutral-500">
           Nobody, including administrators, can see your password. If you forget it, use “Forgot your password?” on the
           sign-in page.
         </p>

@@ -50,7 +50,7 @@ export function ProfilePage() {
     <div className="mx-auto max-w-2xl space-y-5">
       <header>
         <h2 className="text-2xl font-semibold text-heading">My profile</h2>
-        <p className="mt-1 text-sm text-slate-600">Manage your coach name and local time zone.</p>
+        <p className="mt-1 text-sm text-neutral-600">Manage your coach name and local time zone.</p>
       </header>
       <Card className="p-6">
         {profile.isLoading ? (
@@ -62,7 +62,7 @@ export function ProfilePage() {
               <input
                 readOnly
                 value={profile.data?.email ?? ''}
-                className="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-500"
+                className="mt-1 block w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-neutral-500"
               />
             </label>
             <label className="block text-sm font-medium">
@@ -72,7 +72,7 @@ export function ProfilePage() {
                 maxLength={150}
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
-                className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2.5"
+                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2.5"
               />
             </label>
             {profile.data?.role === 'instructor' && (
@@ -84,7 +84,7 @@ export function ProfilePage() {
                     maxLength={150}
                     value={displayName}
                     onChange={(event) => setDisplayName(event.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2.5"
+                    className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2.5"
                   />
                 </label>
                 <TimeZoneSelect
@@ -96,7 +96,7 @@ export function ProfilePage() {
                   countryLabel="Country where you live"
                   timezoneLabel="Coach time zone"
                 />
-                <span className="block text-xs font-normal text-slate-500">
+                <span className="block text-xs font-normal text-neutral-500">
                   Availability hours are interpreted in this time zone.
                 </span>
                 <label className="block text-sm font-medium">
@@ -107,21 +107,21 @@ export function ProfilePage() {
                     value={meetingUrl}
                     onChange={(event) => setMeetingUrl(event.target.value)}
                     placeholder="https://meet.google.com/..."
-                    className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2.5"
+                    className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2.5"
                   />
-                  <span className="mt-1 block text-xs font-normal text-slate-500">
+                  <span className="mt-1 block text-xs font-normal text-neutral-500">
                     This link is added to demos booked with you. You can still use a one-time link for a specific demo.
                   </span>
                 </label>
               </>
             )}
             {savedMessage && (
-              <p role="status" className="text-sm text-emerald-700">
+              <p role="status" className="text-sm text-success-700">
                 {savedMessage}
               </p>
             )}
             {(profile.isError || result.isError) && (
-              <p role="alert" className="text-sm text-rose-700">
+              <p role="alert" className="text-sm text-danger-700">
                 Profile could not be saved. Check the time zone and use a valid HTTPS meeting link.
               </p>
             )}

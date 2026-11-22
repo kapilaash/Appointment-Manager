@@ -5,6 +5,7 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -93,21 +94,27 @@ function applyTheme(theme: AppTheme) {
 export function ThemeProvider({
   userId,
   savedPreference,
+  savedAt,
   children,
 }: {
   userId: string;
   /** The preference stored on the account, so it follows the user across devices. */
   savedPreference: ThemePreference | null | undefined;
+  /** When the account data carrying savedPreference was requested (ms since epoch). */
+  savedAt: number | undefined;
   children: ReactNode;
 }) {
   const [preference, setPreferenceState] = useState<ThemePreference>(
     () => savedPreference ?? readStoredPreference(userId),
   );
-  // Adopt a preference saved on another device when the account data refreshes.
-  const [lastServerPreference, setLastServerPreference] = useState(savedPreference);
-  if (savedPreference !== lastServerPreference) {
-    setLastServerPreference(savedPreference);
-    if (savedPreference) setPreferenceState(savedPreference);
+  // Adopt a preference saved on another device when the account data refreshes, but never let
+  // a response that was requested before the user's latest choice undo that choice.
+  const [localChangedAt, setLocalChangedAt] = useState(0);
+  const serverKey = `${savedPreference ?? ''}|${savedAt ?? 0}`;
+  const [lastServerKey, setLastServerKey] = useState(serverKey);
+  if (serverKey !== lastServerKey) {
+    setLastServerKey(serverKey);
+    if (savedPreference && (savedAt ?? 0) > localChangedAt) setPreferenceState(savedPreference);
   }
   const deviceIsDark = useSyncExternalStore(
     subscribeToDeviceScheme,
@@ -130,15 +137,35 @@ export function ThemeProvider({
     }
   }, [preference]);
 
+  // Saves go out one at a time and only the latest pending choice is sent, so quick
+  // successive clicks reach the server in order and the last one always wins.
+  const queuedSave = useRef<ThemePreference | null>(null);
+  const saving = useRef(false);
+  const flushSaves = useCallback(async () => {
+    if (saving.current) return;
+    saving.current = true;
+    try {
+      while (queuedSave.current) {
+        const next = queuedSave.current;
+        queuedSave.current = null;
+        // Best effort: the local choice already applies even if saving to the account fails.
+        await savePreference({ theme: next })
+          .unwrap()
+          .catch(() => undefined);
+      }
+    } finally {
+      saving.current = false;
+    }
+  }, [savePreference]);
+
   const setPreference = useCallback(
     (next: ThemePreference) => {
       setPreferenceState(next);
-      // Saving to the account is best effort; the local choice already applies.
-      void savePreference({ theme: next })
-        .unwrap()
-        .catch(() => undefined);
+      setLocalChangedAt(Date.now());
+      queuedSave.current = next;
+      void flushSaves();
     },
-    [savePreference],
+    [flushSaves],
   );
 
   const value = useMemo(() => ({ preference, theme, setPreference }), [preference, theme, setPreference]);

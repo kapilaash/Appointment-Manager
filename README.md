@@ -124,6 +124,8 @@ npm run build
 npm run test:e2e
 ```
 
+Screenshot and accessibility checks run in the official Playwright Linux image so they match CI exactly (Docker required): `npm run test:visual` compares key pages in every theme against approved images and runs axe WCAG 2.1 AA scans; after an intentional visual change, review and approve with `npm run test:visual:update`. Colour token names are documented in [docs/design-tokens.md](docs/design-tokens.md).
+
 Against the Docker stack, run `PLAYWRIGHT_BASE_URL=http://127.0.0.1:5173 E2E_ADMIN_EMAIL=... E2E_ADMIN_PASSWORD=... npm run test:e2e`. The Playwright workflow expects the development services, migrations, an administrator created with `seed-admin`, and the ARQ notification worker. GitHub Actions configures these services and runs the full browser scenario. CI also audits installed Python dependencies and the npm dependency tree; Dependabot checks Python, npm, Docker images, and GitHub Actions updates weekly.
 
 ## Production outline

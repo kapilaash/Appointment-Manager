@@ -6,18 +6,18 @@ import { isMfaChallenge, useLoginMutation, useLoginSecondStepMutation } from './
 import { formatLoginError } from './formatLoginError';
 
 const inputClass =
-  'block min-h-12 w-full rounded-xl border border-slate-300 bg-surface py-3 text-base text-heading placeholder:text-slate-400 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/15';
+  'block min-h-12 w-full rounded-xl border border-neutral-300 bg-surface py-3 text-base text-heading placeholder:text-neutral-500 shadow-sm transition focus:border-accent-500 focus:outline-none focus:ring-4 focus:ring-accent-500/15';
 const primaryButton =
-  'flex min-h-12 w-full items-center justify-center rounded-xl bg-action px-4 py-3 text-sm font-semibold text-on-action shadow-sm transition hover:bg-action-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700 disabled:cursor-wait disabled:opacity-60';
+  'flex min-h-12 w-full items-center justify-center rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-on-accent shadow-sm transition hover:bg-accent-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-700 disabled:cursor-wait disabled:opacity-60';
 const linkClass =
-  'rounded font-semibold text-indigo-700 underline decoration-indigo-300 underline-offset-4 hover:text-indigo-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600';
+  'rounded font-semibold text-accent-700 underline decoration-accent-300 underline-offset-4 hover:text-accent-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600';
 
 function ErrorBox({ message }: { message: string }) {
   return (
     <div
       role="alert"
       aria-live="polite"
-      className="mt-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+      className="mt-6 flex items-start gap-3 rounded-xl border border-danger-200 bg-danger-50 p-4 text-sm text-danger-800"
     >
       <ShieldAlert aria-hidden="true" className="mt-0.5 h-5 w-5 flex-shrink-0" />
       <span>{message}</span>
@@ -86,19 +86,19 @@ export const LoginPage: React.FC = () => {
         {codeError && <ErrorBox message={codeError} />}
         <form className="mt-7 space-y-5" onSubmit={handleCode}>
           <div>
-            <label htmlFor="login-code" className="block text-sm font-semibold text-slate-800">
+            <label htmlFor="login-code" className="block text-sm font-semibold text-neutral-800">
               {useRecoveryCode ? 'Recovery code' : 'Authentication code'}
             </label>
             <div className="relative mt-2">
               {useRecoveryCode ? (
                 <KeyRound
                   aria-hidden="true"
-                  className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500"
                 />
               ) : (
                 <ShieldCheck
                   aria-hidden="true"
-                  className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500"
                 />
               )}
               <input
@@ -125,7 +125,7 @@ export const LoginPage: React.FC = () => {
             {verifyResult.isLoading ? 'Checking…' : 'Verify and sign in'}
           </button>
         </form>
-        <p className="mt-5 text-center text-sm text-slate-600">
+        <p className="mt-5 text-center text-sm text-neutral-600">
           <button
             type="button"
             onClick={() => {
@@ -159,13 +159,13 @@ export const LoginPage: React.FC = () => {
       {errorMessage && <ErrorBox message={errorMessage} />}
       <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
         <div>
-          <label htmlFor="login-email" className="block text-sm font-semibold text-slate-800">
+          <label htmlFor="login-email" className="block text-sm font-semibold text-neutral-800">
             Email address
           </label>
           <div className="relative mt-2">
             <Mail
               aria-hidden="true"
-              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500"
             />
             <input
               id="login-email"
@@ -183,7 +183,7 @@ export const LoginPage: React.FC = () => {
               className={`${inputClass} pl-11 pr-3`}
             />
           </div>
-          <p id="login-email-hint" className="mt-1.5 text-xs text-slate-500">
+          <p id="login-email-hint" className="mt-1.5 text-xs text-neutral-500">
             Your username is the email address your academy registered you with.
           </p>
         </div>

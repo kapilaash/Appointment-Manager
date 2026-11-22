@@ -85,6 +85,25 @@ jobs:
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 
+  visual-and-accessibility:
+    # Screenshots of key pages in every theme + axe WCAG 2.1 AA scans, rendered in the
+    # official Playwright image so results match developer machines exactly.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: sh frontend/scripts/visual-tests.sh
+      - name: Keep screenshot diffs for review
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs
+          path: frontend/test-results
+          retention-days: 7
+
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 20

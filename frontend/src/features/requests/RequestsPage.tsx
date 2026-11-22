@@ -25,11 +25,11 @@ const tabs: { id: ChangeRequestStatus | 'all'; label: string }[] = [
   { id: 'all', label: 'All' },
 ];
 const statusStyles: Record<ChangeRequestStatus, string> = {
-  pending: 'bg-amber-50 text-amber-900',
-  approved: 'bg-emerald-50 text-emerald-800',
-  rejected: 'bg-rose-50 text-rose-800',
-  withdrawn: 'bg-slate-100 text-slate-600',
-  superseded: 'bg-slate-100 text-slate-600',
+  pending: 'bg-warning-50 text-warning-900',
+  approved: 'bg-success-50 text-success-800',
+  rejected: 'bg-danger-50 text-danger-800',
+  withdrawn: 'bg-neutral-100 text-neutral-600',
+  superseded: 'bg-neutral-100 text-neutral-600',
 };
 const statusLabels: Record<ChangeRequestStatus, string> = {
   pending: 'Waiting for approval',
@@ -79,13 +79,13 @@ function exceptionText(
 function BeforeAfter({ before, after }: { before: string; after: string }) {
   return (
     <div className="grid items-center gap-2 text-sm sm:grid-cols-[1fr_auto_1fr]">
-      <div className="rounded-lg bg-slate-50 px-3 py-2 text-slate-600">
-        <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Now</span>
+      <div className="rounded-lg bg-neutral-50 px-3 py-2 text-neutral-600">
+        <span className="block text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Now</span>
         {before}
       </div>
-      <ArrowRight size={16} className="mx-auto hidden text-slate-400 sm:block" aria-hidden="true" />
-      <div className="rounded-lg bg-indigo-50 px-3 py-2 text-indigo-900">
-        <span className="block text-[11px] font-semibold uppercase tracking-wide text-indigo-500">Requested</span>
+      <ArrowRight size={16} className="mx-auto hidden text-neutral-500 sm:block" aria-hidden="true" />
+      <div className="rounded-lg bg-accent-50 px-3 py-2 text-accent-900">
+        <span className="block text-[11px] font-semibold uppercase tracking-wide text-accent-700">Requested</span>
         {after}
       </div>
     </div>
@@ -100,8 +100,8 @@ function RequestDetails({ request }: { request: ChangeRequest }) {
       const now = hoursByDay(before?.rules);
       const next = hoursByDay(proposed.rules);
       return (
-        <div className="overflow-hidden rounded-lg border border-slate-200 text-sm">
-          <div className="grid grid-cols-[6.5rem_1fr_1fr] bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        <div className="overflow-hidden rounded-lg border border-neutral-200 text-sm">
+          <div className="grid grid-cols-[6.5rem_1fr_1fr] bg-neutral-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
             <span>Day</span>
             <span>Now</span>
             <span>Requested ({coachZone})</span>
@@ -109,11 +109,11 @@ function RequestDetails({ request }: { request: ChangeRequest }) {
           {weekdays.map((day, index) => (
             <div
               key={day}
-              className={`grid grid-cols-[6.5rem_1fr_1fr] border-t border-slate-100 px-3 py-2 ${now[index] !== next[index] ? 'bg-amber-50/60' : ''}`}
+              className={`grid grid-cols-[6.5rem_1fr_1fr] border-t border-neutral-100 px-3 py-2 ${now[index] !== next[index] ? 'bg-warning-50/60' : ''}`}
             >
-              <span className="font-medium text-slate-700">{day.slice(0, 3)}</span>
-              <span className="text-slate-500">{now[index]}</span>
-              <span className={now[index] !== next[index] ? 'font-semibold text-slate-900' : 'text-slate-500'}>
+              <span className="font-medium text-neutral-700">{day.slice(0, 3)}</span>
+              <span className="text-neutral-500">{now[index]}</span>
+              <span className={now[index] !== next[index] ? 'font-semibold text-neutral-900' : 'text-neutral-500'}>
                 {next[index]}
               </span>
             </div>
@@ -137,7 +137,7 @@ function RequestDetails({ request }: { request: ChangeRequest }) {
         <div className="space-y-2">
           <BeforeAfter before={`Booked · ${moment(before?.starts_at, coachZone)}`} after="Cancelled" />
           {before?.student_name && (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-neutral-500">
               Student: {before.student_name}
               {before.student_timezone ? ` · their time ${moment(before.starts_at, before.student_timezone)}` : ''}
             </p>
@@ -149,7 +149,7 @@ function RequestDetails({ request }: { request: ChangeRequest }) {
         <div className="space-y-2">
           <BeforeAfter before={moment(before?.starts_at, coachZone)} after={moment(proposed.starts_at, coachZone)} />
           {before?.student_name && before.student_timezone && (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-neutral-500">
               Student {before.student_name} · their time {moment(before.starts_at, before.student_timezone)} →{' '}
               {moment(proposed.starts_at, before.student_timezone)}
             </p>
@@ -157,7 +157,7 @@ function RequestDetails({ request }: { request: ChangeRequest }) {
         </div>
       );
     default:
-      return <p className="text-sm text-slate-600">{request.summary}</p>;
+      return <p className="text-sm text-neutral-600">{request.summary}</p>;
   }
 }
 
@@ -225,7 +225,7 @@ export function RequestsPage() {
     <div className="space-y-6">
       <header>
         <h2 className="text-2xl font-semibold tracking-tight text-heading">{isAdmin ? 'Approvals' : 'My requests'}</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-neutral-500">
           {isAdmin
             ? 'Coach changes to availability, time zone, and demo bookings take effect only after you approve them.'
             : 'Changes you asked for. They take effect once an administrator approves them; you get an email either way.'}
@@ -240,7 +240,7 @@ export function RequestsPage() {
             role="tab"
             aria-selected={tab === item.id}
             onClick={() => chooseTab(item.id)}
-            className={`min-h-10 rounded-full px-4 text-sm font-semibold transition ${tab === item.id ? 'bg-action text-on-action shadow-sm' : 'bg-surface text-slate-600 ring-1 ring-inset ring-slate-200 hover:bg-slate-50'}`}
+            className={`min-h-10 rounded-full px-4 text-sm font-semibold transition ${tab === item.id ? 'bg-accent text-on-accent shadow-sm' : 'bg-surface text-neutral-600 ring-1 ring-inset ring-neutral-200 hover:bg-neutral-50'}`}
           >
             {item.label}
           </button>
@@ -250,7 +250,7 @@ export function RequestsPage() {
       {affected.length > 0 && (
         <div
           role="status"
-          className="ui-enter rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+          className="ui-enter rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm text-warning-900"
         >
           Existing bookings were kept but now fall outside the approved hours. Review them:
           {affected.map((id) => (
@@ -261,7 +261,7 @@ export function RequestsPage() {
         </div>
       )}
       {error && (
-        <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">
+        <p role="alert" className="rounded-lg bg-danger-50 p-3 text-sm text-danger-700">
           {error}
         </p>
       )}
@@ -274,7 +274,7 @@ export function RequestsPage() {
         </div>
       ) : requests.isError ? (
         <Card className="p-6">
-          <p role="alert" className="text-sm text-rose-700">
+          <p role="alert" className="text-sm text-danger-700">
             Requests could not be loaded.
           </p>
           <Button variant="secondary" className="mt-3" onClick={() => void requests.refetch()}>
@@ -283,11 +283,11 @@ export function RequestsPage() {
         </Card>
       ) : items.length === 0 ? (
         <Card className="grid place-items-center gap-2 p-12 text-center">
-          <Inbox size={28} className="text-slate-300" aria-hidden="true" />
-          <p className="font-medium text-slate-700">
+          <Inbox size={28} className="text-neutral-300" aria-hidden="true" />
+          <p className="font-medium text-neutral-700">
             {tab === 'pending' ? 'Nothing waiting for approval' : 'No requests in this view'}
           </p>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-neutral-500">
             {tab === 'pending' && isAdmin ? 'New coach requests appear here and are emailed to every admin.' : ' '}
           </p>
         </Card>
@@ -298,9 +298,9 @@ export function RequestsPage() {
               <article aria-label={`${request.label} from ${request.instructor_name}`} className="space-y-4">
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">{request.label}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-accent-700">{request.label}</p>
                     <h3 className="mt-1 font-semibold text-heading">{request.instructor_name}</h3>
-                    <p className="mt-0.5 text-xs text-slate-500">
+                    <p className="mt-0.5 text-xs text-neutral-500">
                       Sent{' '}
                       {new Date(request.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} ·
                       coach time zone {request.instructor_timezone}
@@ -317,23 +317,23 @@ export function RequestsPage() {
                 <RequestDetails request={request} />
 
                 {request.coach_note && (
-                  <p className="rounded-lg border-l-4 border-indigo-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  <p className="rounded-lg border-l-4 border-accent-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
                     <span className="font-medium">Coach note:</span> {request.coach_note}
                   </p>
                 )}
                 {request.review_note && (
-                  <p className="rounded-lg border-l-4 border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  <p className="rounded-lg border-l-4 border-neutral-300 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
                     <span className="font-medium">Admin note:</span> {request.review_note}
                     {request.reviewed_by_email ? ` — ${request.reviewed_by_email}` : ''}
                   </p>
                 )}
 
                 {request.status === 'pending' && (
-                  <div className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+                  <div className="flex flex-col gap-2 border-t border-neutral-100 pt-4 sm:flex-row sm:justify-end">
                     {request.appointment_id && (
                       <Link
                         to={`/calendar?appointment=${request.appointment_id}`}
-                        className="inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+                        className="inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-neutral-600 hover:bg-neutral-100"
                       >
                         View demo
                       </Link>
@@ -401,7 +401,7 @@ export function RequestsPage() {
         onClose={() => setRejectTarget(null)}
         onConfirm={() => void confirmReject()}
       >
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-neutral-700">
           Note for the coach
           <textarea
             autoFocus
@@ -411,7 +411,7 @@ export function RequestsPage() {
             value={rejectNote}
             onChange={(event) => setRejectNote(event.target.value)}
             placeholder="For example, a family is already booked on that day."
-            className="mt-2 block min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+            className="mt-2 block min-h-24 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm"
           />
         </label>
       </Dialog>

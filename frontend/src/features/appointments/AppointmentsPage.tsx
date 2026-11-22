@@ -113,14 +113,14 @@ export function AppointmentsPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight text-heading">Appointments</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-neutral-500">
           Review classes, meeting links, and email delivery. Mark a confirmed demo complete after its scheduled end.
         </p>
       </div>
       <Card className="overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <label className="flex items-center gap-2 rounded-lg border border-slate-300 px-3">
-            <Search size={16} className="text-slate-400" />
+        <div className="flex flex-col gap-3 border-b border-neutral-100 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <label className="flex items-center gap-2 rounded-lg border border-neutral-300 px-3">
+            <Search size={16} className="text-neutral-500" />
             <input
               aria-label="Search appointments"
               value={search}
@@ -133,7 +133,7 @@ export function AppointmentsPage() {
                 type="button"
                 aria-label="Clear search"
                 onClick={() => setSearch('')}
-                className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                className="rounded p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
               >
                 <X size={14} />
               </button>
@@ -143,7 +143,7 @@ export function AppointmentsPage() {
             aria-label="Filter by status"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-surface px-3 text-sm sm:w-auto"
+            className="w-full rounded-lg border border-neutral-300 bg-surface px-3 text-sm sm:w-auto"
           >
             <option value="">All statuses</option>
             <option value="confirmed">Confirmed</option>
@@ -152,18 +152,18 @@ export function AppointmentsPage() {
           </select>
         </div>
         {normalizedSearch.length >= 2 && !isSearchPending && searchResults.currentData && (
-          <p role="status" className="border-b border-slate-100 px-4 py-3 text-sm text-slate-500">
+          <p role="status" className="border-b border-neutral-100 px-4 py-3 text-sm text-neutral-500">
             Showing {rows.length} of {searchResults.currentData.estimated_total_hits} matching appointments.
           </p>
         )}
         {isLoadingRows ? (
           <div className="space-y-3 p-5">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-16 animate-pulse rounded-lg bg-slate-100" />
+              <div key={i} className="h-16 animate-pulse rounded-lg bg-neutral-100" />
             ))}
           </div>
         ) : hasRowsError ? (
-          <div role="alert" className="p-6 text-sm text-rose-700">
+          <div role="alert" className="p-6 text-sm text-danger-700">
             {debouncedSearch ? 'Appointment search is temporarily unavailable.' : 'Could not load appointments.'}
             <button
               type="button"
@@ -177,22 +177,22 @@ export function AppointmentsPage() {
             </button>
           </div>
         ) : rows.length ? (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-neutral-100">
             {rows.map((item) => (
               <article
                 key={item.id}
                 className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between"
               >
                 <div className="flex min-w-0 items-start gap-4">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-700">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent-50 text-accent-700">
                     <CalendarClock size={19} />
                   </span>
                   <div className="min-w-0">
-                    <p className="font-medium text-slate-900">
-                      {item.student?.name ?? 'Deleted student'} <span className="font-normal text-slate-400">with</span>{' '}
-                      {item.instructor_name}
+                    <p className="font-medium text-neutral-900">
+                      {item.student?.name ?? 'Deleted student'}{' '}
+                      <span className="font-normal text-neutral-500">with</span> {item.instructor_name}
                     </p>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-neutral-500">
                       {formatInTimeZone(new Date(item.starts_at), item.instructor_timezone, 'EEE, MMM d · h:mm a zzz')}
                       {item.student?.email ? ` · ${item.student.email}` : ''}
                     </p>
@@ -201,20 +201,20 @@ export function AppointmentsPage() {
                         href={item.meeting_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-lg bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 hover:bg-indigo-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                        className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent-50 px-3 text-sm font-semibold text-accent-800 hover:bg-accent-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600"
                       >
                         <ExternalLink size={15} />
                         Join demo
                       </a>
                     )}
-                    <p className="mt-1 font-mono text-[10px] text-slate-400">{item.id}</p>
+                    <p className="mt-1 font-mono text-[10px] text-neutral-500">{item.id}</p>
                     {item.cancellation_reason && (
-                      <p className="mt-2 text-sm text-slate-600">
+                      <p className="mt-2 text-sm text-neutral-600">
                         <strong>Cancellation reason:</strong> {item.cancellation_reason}
                       </p>
                     )}
                     {item.reschedule_reason && (
-                      <p className="mt-1 text-sm text-slate-600">
+                      <p className="mt-1 text-sm text-neutral-600">
                         <strong>Latest reschedule reason:</strong> {item.reschedule_reason}
                       </p>
                     )}
@@ -222,19 +222,19 @@ export function AppointmentsPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {item.status === 'confirmed' && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-success-50 px-2.5 py-1 text-xs font-medium text-success-700">
                       <CheckCircle2 size={13} />
                       Confirmed
                     </span>
                   )}
                   {item.status === 'completed' && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-success-50 px-2.5 py-1 text-xs font-medium text-success-700">
                       <BadgeCheck size={13} />
                       Completed
                     </span>
                   )}
                   {item.status === 'cancelled' && (
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                    <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
                       Cancelled
                     </span>
                   )}
@@ -260,7 +260,7 @@ export function AppointmentsPage() {
                     </Button>
                   )}
                   {item.pending_request && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-900">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-warning-50 px-2.5 py-1 text-xs font-medium text-warning-900">
                       <Hourglass size={13} aria-hidden="true" />
                       {item.pending_request.request_type === 'appointment_cancel'
                         ? 'Cancellation awaiting approval'
@@ -279,7 +279,7 @@ export function AppointmentsPage() {
                       </Button>
                       <Button
                         variant="ghost"
-                        className="px-3 py-2 text-xs text-rose-700"
+                        className="px-3 py-2 text-xs text-danger-700"
                         disabled={cancelResult.isLoading}
                         onClick={() => openCancelDialog(item)}
                       >
@@ -293,34 +293,34 @@ export function AppointmentsPage() {
             ))}
           </div>
         ) : (
-          <div className="p-14 text-center text-sm text-slate-500">
+          <div className="p-14 text-center text-sm text-neutral-500">
             {normalizedSearch.length === 1
               ? 'Type one more character to search appointments.'
               : 'No appointments match this view.'}
           </div>
         )}
         {selectedNotifications && (
-          <div className="border-t border-slate-100 bg-slate-50 p-5">
-            <h3 className="text-sm font-semibold text-slate-900">Notification status</h3>
+          <div className="border-t border-neutral-100 bg-neutral-50 p-5">
+            <h3 className="text-sm font-semibold text-neutral-900">Notification status</h3>
             {notifications.isLoading ? (
-              <p className="mt-2 text-sm text-slate-500">Loading…</p>
+              <p className="mt-2 text-sm text-neutral-500">Loading…</p>
             ) : notifications.data?.length ? (
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 {notifications.data.map((item, index) => (
                   <div
                     key={`${item.event_type}-${item.recipient}-${index}`}
-                    className="rounded-lg border border-slate-200 bg-surface p-3"
+                    className="rounded-lg border border-neutral-200 bg-surface p-3"
                   >
-                    <p className="truncate text-xs text-slate-600">{item.recipient}</p>
-                    <p className="mt-1 text-xs font-medium capitalize text-slate-900">
+                    <p className="truncate text-xs text-neutral-600">{item.recipient}</p>
+                    <p className="mt-1 text-xs font-medium capitalize text-neutral-900">
                       {item.event_type} · {item.delivery_status.replace('_', ' ')}
                     </p>
-                    <p className="mt-1 text-[11px] text-slate-400">Attempts: {item.attempt_count}</p>
+                    <p className="mt-1 text-[11px] text-neutral-500">Attempts: {item.attempt_count}</p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="mt-2 text-sm text-slate-500">No notification attempts recorded yet.</p>
+              <p className="mt-2 text-sm text-neutral-500">No notification attempts recorded yet.</p>
             )}
           </div>
         )}
@@ -343,7 +343,7 @@ export function AppointmentsPage() {
         onClose={() => setCancelTarget(null)}
         onConfirm={() => void confirmCancel()}
       >
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-neutral-700">
           Reason for cancellation
           <textarea
             autoFocus
@@ -353,11 +353,11 @@ export function AppointmentsPage() {
             value={cancelReason}
             onChange={(event) => setCancelReason(event.target.value)}
             placeholder="For example, the family requested a different date."
-            className="mt-2 block min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+            className="mt-2 block min-h-24 w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm"
           />
         </label>
         {cancelError && (
-          <p role="alert" className="mt-3 text-sm text-rose-700">
+          <p role="alert" className="mt-3 text-sm text-danger-700">
             {cancelError}
           </p>
         )}
@@ -376,7 +376,7 @@ export function AppointmentsPage() {
         onConfirm={() => void confirmComplete()}
       >
         {completeError && (
-          <p role="alert" className="text-sm text-rose-700">
+          <p role="alert" className="text-sm text-danger-700">
             {completeError}
           </p>
         )}

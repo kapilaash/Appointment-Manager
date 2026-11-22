@@ -20,15 +20,15 @@ export class ErrorBoundary extends Component<Props, State> {
   override render() {
     if (!this.state.failed) return this.props.children;
     return (
-      <main role="alert" className="grid min-h-screen place-items-center bg-slate-50 p-6 text-center">
+      <main role="alert" className="grid min-h-screen place-items-center bg-neutral-50 p-6 text-center">
         <div className="max-w-sm">
           <h1 className="text-xl font-semibold text-heading">Something went wrong</h1>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm text-neutral-600">
             The page hit an unexpected error. It has been recorded. Reloading usually fixes it.
           </p>
           <button
             type="button"
-            className="mt-5 min-h-11 rounded-lg bg-action px-5 text-sm font-semibold text-on-action"
+            className="mt-5 min-h-11 rounded-lg bg-accent px-5 text-sm font-semibold text-on-accent"
             onClick={() => window.location.reload()}
           >
             Reload page

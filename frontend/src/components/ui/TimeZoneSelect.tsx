@@ -47,7 +47,7 @@ export function TimeZoneSelect({
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <label className="block text-sm font-medium text-slate-700">
+      <label className="block text-sm font-medium text-neutral-700">
         {countryLabel}
         <select
           required={required}
@@ -57,7 +57,7 @@ export function TimeZoneSelect({
             onCountryCodeChange(event.target.value);
             onTimezoneChange('');
           }}
-          className={`mt-1.5 w-full rounded-lg border border-slate-300 bg-surface px-3 py-2.5 text-sm ${className}`}
+          className={`mt-1.5 w-full rounded-lg border border-neutral-300 bg-surface px-3 py-2.5 text-sm ${className}`}
         >
           <option value="">Choose a country</option>
           {countries.map(([code, name]) => (
@@ -67,14 +67,14 @@ export function TimeZoneSelect({
           ))}
         </select>
       </label>
-      <label className="block text-sm font-medium text-slate-700">
+      <label className="block text-sm font-medium text-neutral-700">
         {timezoneLabel}
         <select
           required={required}
           disabled={disabled || !selectedCountry}
           value={selectedZone}
           onChange={(event) => onTimezoneChange(event.target.value)}
-          className={`mt-1.5 w-full rounded-lg border border-slate-300 bg-surface px-3 py-2.5 text-sm ${className}`}
+          className={`mt-1.5 w-full rounded-lg border border-neutral-300 bg-surface px-3 py-2.5 text-sm ${className}`}
         >
           <option value="">{selectedCountry ? 'Choose a region or city' : 'Choose a country first'}</option>
           {countryZones.map((zone) => (
@@ -85,7 +85,7 @@ export function TimeZoneSelect({
           ))}
         </select>
       </label>
-      <p className="text-xs font-normal text-slate-500 sm:col-span-2">
+      <p className="text-xs font-normal text-neutral-500 sm:col-span-2">
         Times use the selected IANA region and follow its daylight saving time rules automatically.
       </p>
     </div>

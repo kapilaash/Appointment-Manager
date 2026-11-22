@@ -29,6 +29,8 @@ export default defineConfig({
     {
       name: 'visual',
       testDir: './e2e/visual',
+      // Full-page captures wait for two identical frames; give slower machines room to settle.
+      expect: { timeout: 15_000 },
       use: {
         ...devices['Desktop Chrome'],
         timezoneId: 'UTC',

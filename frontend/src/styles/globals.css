@@ -6,10 +6,10 @@
   color-scheme: light;
   --surface: 255 255 255;
   --heading: 2 6 23;
-  --action: 79 70 229;
-  --action-hover: 67 56 202;
-  /* Text/icons drawn on top of --action (buttons, selected chips). */
-  --action-foreground: 255 255 255;
+  --accent: 79 70 229;
+  --accent-hover: 67 56 202;
+  /* Text/icons drawn on top of --accent (buttons, selected chips). */
+  --on-accent: 255 255 255;
   --danger: 190 18 60;
   --danger-hover: 159 18 57;
   --calendar-confirmed-bg: 79 70 229;
@@ -18,59 +18,58 @@
   --calendar-cancelled-text: 15 23 42;
   --calendar-completed-bg: 5 150 105;
   --calendar-completed-text: 255 255 255;
-  --slate-50: 248 250 252;
-  --slate-100: 241 245 249;
-  --slate-200: 226 232 240;
-  --slate-300: 203 213 225;
-  --slate-400: 148 163 184;
-  --slate-500: 100 116 139;
-  --slate-600: 71 85 105;
-  --slate-700: 51 65 85;
-  --slate-800: 30 41 59;
-  --slate-900: 15 23 42;
-  --indigo-50: 238 242 255;
-  --indigo-100: 224 231 255;
-  --indigo-200: 199 210 254;
-  --indigo-300: 165 180 252;
-  --indigo-400: 129 140 248;
-  --indigo-500: 99 102 241;
-  --indigo-600: 79 70 229;
-  --indigo-700: 67 56 202;
-  --indigo-800: 55 48 163;
-  --indigo-900: 49 46 129;
-  --indigo-950: 30 27 75;
-  --amber-50: 255 251 235;
-  --amber-100: 254 243 199;
-  --amber-200: 253 230 138;
-  --amber-300: 252 211 77;
-  --amber-700: 180 83 9;
-  --amber-900: 120 53 15;
-  --amber-950: 69 26 3;
-  --emerald-50: 236 253 245;
-  --emerald-100: 209 250 229;
-  --emerald-600: 5 150 105;
-  --emerald-700: 4 120 87;
-  --emerald-800: 6 95 70;
-  --rose-50: 255 241 242;
-  --rose-200: 254 205 211;
-  --rose-400: 251 113 133;
-  --rose-500: 244 63 94;
-  --rose-600: 225 29 72;
-  --rose-700: 190 18 60;
-  --rose-800: 159 18 57;
-  --red-50: 254 242 242;
-  --red-200: 254 202 202;
-  --red-700: 185 28 28;
-  --red-800: 153 27 27;
+  --neutral-50: 248 250 252;
+  --neutral-100: 241 245 249;
+  --neutral-200: 226 232 240;
+  --neutral-300: 203 213 225;
+  --neutral-400: 148 163 184;
+  --neutral-500: 100 116 139;
+  --neutral-600: 71 85 105;
+  --neutral-700: 51 65 85;
+  --neutral-800: 30 41 59;
+  --neutral-900: 15 23 42;
+  --accent-50: 238 242 255;
+  --accent-100: 224 231 255;
+  --accent-200: 199 210 254;
+  --accent-300: 165 180 252;
+  --accent-400: 129 140 248;
+  --accent-500: 99 102 241;
+  --accent-600: 79 70 229;
+  --accent-700: 67 56 202;
+  --accent-800: 55 48 163;
+  --accent-900: 49 46 129;
+  --accent-950: 30 27 75;
+  --warning-50: 255 251 235;
+  --warning-100: 254 243 199;
+  --warning-200: 253 230 138;
+  --warning-300: 252 211 77;
+  --warning-700: 180 83 9;
+  --warning-900: 120 53 15;
+  --warning-950: 69 26 3;
+  --success-50: 236 253 245;
+  --success-100: 209 250 229;
+  --success-600: 5 150 105;
+  --success-700: 4 120 87;
+  --success-800: 6 95 70;
+  --success-200: 167 243 208;
+  --success-900: 6 78 59;
+  --warning-500: 245 158 11;
+  --danger-50: 255 241 242;
+  --danger-200: 254 205 211;
+  --danger-400: 251 113 133;
+  --danger-500: 244 63 94;
+  --danger-600: 225 29 72;
+  --danger-700: 190 18 60;
+  --danger-800: 159 18 57;
 }
 
 html[data-theme='dark'] {
   color-scheme: dark;
   --surface: 24 24 27;
   --heading: 250 250 250;
-  --action: 244 244 245;
-  --action-hover: 212 212 216;
-  --action-foreground: 9 9 11;
+  --accent: 244 244 245;
+  --accent-hover: 212 212 216;
+  --on-accent: 9 9 11;
   --danger: 159 18 57;
   --danger-hover: 136 19 55;
   --calendar-confirmed-bg: 244 244 245;
@@ -79,113 +78,111 @@ html[data-theme='dark'] {
   --calendar-cancelled-text: 250 250 250;
   --calendar-completed-bg: 19 83 62;
   --calendar-completed-text: 209 250 229;
-  --slate-50: 9 9 11;
-  --slate-100: 24 24 27;
-  --slate-200: 39 39 42;
-  --slate-300: 63 63 70;
-  --slate-400: 161 161 170;
-  --slate-500: 174 174 182;
-  --slate-600: 198 198 204;
-  --slate-700: 220 220 224;
-  --slate-800: 237 237 239;
-  --slate-900: 250 250 250;
-  --indigo-50: 32 32 35;
-  --indigo-100: 39 39 42;
-  --indigo-200: 63 63 70;
-  --indigo-300: 82 82 91;
-  --indigo-400: 113 113 122;
-  --indigo-500: 161 161 170;
-  --indigo-600: 244 244 245;
-  --indigo-700: 228 228 231;
-  --indigo-800: 212 212 216;
-  --indigo-900: 161 161 170;
-  --indigo-950: 113 113 122;
-  --amber-50: 54 42 20;
-  --amber-100: 73 56 24;
-  --amber-200: 112 84 34;
-  --amber-300: 146 111 48;
-  --amber-700: 243 204 113;
-  --amber-900: 255 228 165;
-  --amber-950: 255 239 202;
-  --emerald-50: 19 53 43;
-  --emerald-100: 24 71 56;
-  --emerald-600: 45 165 121;
-  --emerald-700: 99 222 169;
-  --emerald-800: 155 240 199;
-  --rose-50: 59 28 37;
-  --rose-200: 108 48 61;
-  --rose-400: 249 130 150;
-  --rose-500: 248 104 130;
-  --rose-600: 250 119 143;
-  --rose-700: 255 184 197;
-  --rose-800: 255 211 219;
-  --red-50: 64 29 36;
-  --red-200: 109 47 57;
-  --red-700: 255 155 168;
-  --red-800: 255 194 202;
+  --neutral-50: 9 9 11;
+  --neutral-100: 24 24 27;
+  --neutral-200: 39 39 42;
+  --neutral-300: 63 63 70;
+  --neutral-400: 161 161 170;
+  --neutral-500: 174 174 182;
+  --neutral-600: 198 198 204;
+  --neutral-700: 220 220 224;
+  --neutral-800: 237 237 239;
+  --neutral-900: 250 250 250;
+  --accent-50: 32 32 35;
+  --accent-100: 39 39 42;
+  --accent-200: 63 63 70;
+  --accent-300: 82 82 91;
+  --accent-400: 113 113 122;
+  --accent-500: 161 161 170;
+  --accent-600: 244 244 245;
+  --accent-700: 228 228 231;
+  --accent-800: 212 212 216;
+  --accent-900: 161 161 170;
+  --accent-950: 113 113 122;
+  --warning-50: 54 42 20;
+  --warning-100: 73 56 24;
+  --warning-200: 112 84 34;
+  --warning-300: 146 111 48;
+  --warning-700: 243 204 113;
+  --warning-900: 255 228 165;
+  --warning-950: 255 239 202;
+  --success-50: 19 53 43;
+  --success-100: 24 71 56;
+  --success-600: 45 165 121;
+  --success-700: 99 222 169;
+  --success-800: 155 240 199;
+  --success-200: 167 243 208;
+  --success-900: 6 78 59;
+  --warning-500: 245 158 11;
+  --danger-50: 59 28 37;
+  --danger-200: 108 48 61;
+  --danger-400: 249 130 150;
+  --danger-500: 248 104 130;
+  --danger-600: 250 119 143;
+  --danger-700: 255 184 197;
+  --danger-800: 255 211 219;
 }
 
 html[data-theme='classic'] {
   color-scheme: light;
   --surface: 255 253 246;
   --heading: 28 27 23;
-  --action: 40 101 66;
-  --action-hover: 31 81 53;
-  --action-foreground: 255 253 246;
+  --accent: 40 101 66;
+  --accent-hover: 31 81 53;
+  --on-accent: 255 253 246;
   --calendar-confirmed-bg: 40 101 66;
   --calendar-confirmed-text: 255 253 246;
   --calendar-cancelled-bg: 205 191 162;
   --calendar-cancelled-text: 34 31 25;
   --calendar-completed-bg: 34 83 55;
   --calendar-completed-text: 232 241 229;
-  --slate-50: 247 243 232;
-  --slate-100: 239 233 216;
-  --slate-200: 224 215 193;
-  --slate-300: 205 191 162;
-  --slate-400: 143 129 101;
-  --slate-500: 118 106 81;
-  --slate-600: 91 81 62;
-  --slate-700: 68 60 46;
-  --slate-800: 47 42 33;
-  --slate-900: 34 31 25;
-  --indigo-50: 232 241 229;
-  --indigo-100: 215 232 210;
-  --indigo-200: 188 216 182;
-  --indigo-300: 150 193 151;
-  --indigo-400: 112 164 119;
-  --indigo-500: 72 135 91;
-  --indigo-600: 40 101 66;
-  --indigo-700: 34 83 55;
-  --indigo-800: 29 68 46;
-  --indigo-900: 24 55 37;
-  --indigo-950: 17 38 27;
-  --amber-50: 250 243 218;
-  --amber-100: 244 229 184;
-  --amber-200: 232 207 132;
-  --amber-300: 218 181 81;
-  --amber-700: 137 94 24;
-  --amber-900: 91 59 16;
-  --amber-950: 58 37 13;
-  --emerald-50: 232 241 229;
-  --emerald-100: 215 232 210;
-  --emerald-600: 40 101 66;
-  --emerald-700: 34 83 55;
-  --emerald-800: 29 68 46;
-  --rose-50: 252 236 231;
-  --rose-200: 242 205 195;
-  --rose-400: 211 105 91;
-  --rose-500: 193 77 65;
-  --rose-600: 172 58 49;
-  --rose-700: 145 45 38;
-  --rose-800: 119 38 33;
-  --red-50: 252 236 231;
-  --red-200: 242 205 195;
-  --red-700: 145 45 38;
-  --red-800: 119 38 33;
+  --neutral-50: 247 243 232;
+  --neutral-100: 239 233 216;
+  --neutral-200: 224 215 193;
+  --neutral-300: 205 191 162;
+  --neutral-400: 143 129 101;
+  --neutral-500: 118 106 81;
+  --neutral-600: 91 81 62;
+  --neutral-700: 68 60 46;
+  --neutral-800: 47 42 33;
+  --neutral-900: 34 31 25;
+  --accent-50: 232 241 229;
+  --accent-100: 215 232 210;
+  --accent-200: 188 216 182;
+  --accent-300: 150 193 151;
+  --accent-400: 112 164 119;
+  --accent-500: 72 135 91;
+  --accent-600: 40 101 66;
+  --accent-700: 34 83 55;
+  --accent-800: 29 68 46;
+  --accent-900: 24 55 37;
+  --accent-950: 17 38 27;
+  --warning-50: 250 243 218;
+  --warning-100: 244 229 184;
+  --warning-200: 232 207 132;
+  --warning-300: 218 181 81;
+  --warning-700: 137 94 24;
+  --warning-900: 91 59 16;
+  --warning-950: 58 37 13;
+  --success-50: 232 241 229;
+  --success-100: 215 232 210;
+  --success-600: 40 101 66;
+  --success-700: 34 83 55;
+  --success-800: 29 68 46;
+  --success-200: 167 243 208;
+  --success-900: 6 78 59;
+  --warning-500: 245 158 11;
+  --danger-50: 252 236 231;
+  --danger-200: 242 205 195;
+  --danger-400: 211 105 91;
+  --danger-500: 193 77 65;
+  --danger-600: 172 58 49;
+  --danger-700: 145 45 38;
+  --danger-800: 119 38 33;
 }
 
 html[data-theme='classic'] .theme-brand-mark {
-  box-shadow: 0 0 0 1px rgb(var(--amber-300));
+  box-shadow: 0 0 0 1px rgb(var(--warning-300));
 }
 
 html[data-theme='dark'] .theme-canvas {
@@ -200,7 +197,7 @@ html[data-theme='dark'] .theme-canvas {
   }
 
   body {
-    @apply min-h-screen bg-slate-50 font-sans text-slate-900 antialiased;
+    @apply min-h-screen bg-canvas font-sans text-neutral-900 antialiased;
     /* Inter's single-storey a and open digits read better at small UI sizes. */
     font-feature-settings: 'cv11', 'ss01';
   }
@@ -221,17 +218,18 @@ html[data-theme='dark'] .theme-canvas {
   select,
   textarea {
     background-color: rgb(var(--surface));
-    color: rgb(var(--slate-900));
+    color: rgb(var(--neutral-900));
   }
 
   option {
     background-color: rgb(var(--surface));
-    color: rgb(var(--slate-900));
+    color: rgb(var(--neutral-900));
   }
 
   input::placeholder,
   textarea::placeholder {
-    color: rgb(var(--slate-400));
+    /* Placeholders are text too: keep WCAG AA contrast (4.5:1). */
+    color: rgb(var(--neutral-500));
     opacity: 1;
   }
 
@@ -255,7 +253,7 @@ html[data-theme='dark'] .theme-canvas {
   }
 
   :focus-visible {
-    outline: 2px solid rgb(var(--indigo-500));
+    outline: 2px solid rgb(var(--accent-500));
     outline-offset: 2px;
   }
 }
@@ -337,7 +335,7 @@ dialog[open]::backdrop {
 .skeleton {
   position: relative;
   overflow: hidden;
-  background-color: rgb(var(--slate-100));
+  background-color: rgb(var(--neutral-100));
 }
 
 .skeleton::after {
@@ -403,22 +401,22 @@ dialog[open]::backdrop {
 }
 
 .calendar-theme .fc {
-  --fc-border-color: rgb(var(--slate-200));
+  --fc-border-color: rgb(var(--neutral-200));
   --fc-page-bg-color: rgb(var(--surface));
-  --fc-page-text-color: rgb(var(--slate-900));
-  --fc-neutral-bg-color: rgb(var(--slate-50));
-  --fc-neutral-text-color: rgb(var(--slate-700));
-  --fc-today-bg-color: rgb(var(--indigo-50));
-  --fc-button-text-color: rgb(var(--action-foreground));
-  --fc-button-bg-color: rgb(var(--action));
-  --fc-button-border-color: rgb(var(--action));
-  --fc-button-hover-bg-color: rgb(var(--action-hover));
-  --fc-button-hover-border-color: rgb(var(--action-hover));
-  --fc-button-active-bg-color: rgb(var(--action-hover));
-  --fc-button-active-border-color: rgb(var(--action-hover));
+  --fc-page-text-color: rgb(var(--neutral-900));
+  --fc-neutral-bg-color: rgb(var(--neutral-50));
+  --fc-neutral-text-color: rgb(var(--neutral-700));
+  --fc-today-bg-color: rgb(var(--accent-50));
+  --fc-button-text-color: rgb(var(--on-accent));
+  --fc-button-bg-color: rgb(var(--accent));
+  --fc-button-border-color: rgb(var(--accent));
+  --fc-button-hover-bg-color: rgb(var(--accent-hover));
+  --fc-button-hover-border-color: rgb(var(--accent-hover));
+  --fc-button-active-bg-color: rgb(var(--accent-hover));
+  --fc-button-active-border-color: rgb(var(--accent-hover));
   --fc-event-border-color: transparent;
   --fc-event-text-color: #fff;
-  --fc-now-indicator-color: rgb(var(--rose-600));
+  --fc-now-indicator-color: rgb(var(--danger-600));
   font-family: inherit;
   font-size: 0.875rem;
 }
@@ -433,7 +431,7 @@ dialog[open]::backdrop {
   font-weight: 650;
 }
 .calendar-theme .fc .fc-list-event:hover td {
-  background-color: rgb(var(--indigo-50));
+  background-color: rgb(var(--accent-50));
 }
 .calendar-theme .fc .fc-event {
   border-radius: 5px;
@@ -469,18 +467,18 @@ dialog[open]::backdrop {
 }
 .calendar-theme .fc .fc-event:focus-visible,
 .calendar-theme .fc .fc-more-link:focus-visible {
-  outline: 2px solid rgb(var(--action));
+  outline: 2px solid rgb(var(--accent));
   outline-offset: 2px;
 }
 .calendar-theme .fc .fc-popover {
-  border-color: rgb(var(--slate-300));
+  border-color: rgb(var(--neutral-300));
   background: rgb(var(--surface));
-  color: rgb(var(--slate-900));
+  color: rgb(var(--neutral-900));
   box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
 }
 .calendar-theme .fc .fc-popover-header {
-  background: rgb(var(--slate-100));
-  color: rgb(var(--slate-800));
+  background: rgb(var(--neutral-100));
+  color: rgb(var(--neutral-800));
 }
 
 /*

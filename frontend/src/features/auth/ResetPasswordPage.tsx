@@ -38,7 +38,7 @@ export function ResetPasswordPage() {
       {result.isSuccess ? (
         <div
           role="status"
-          className="mt-7 flex items-start gap-3 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-900"
+          className="mt-7 flex items-start gap-3 rounded-xl bg-success-50 p-4 text-sm text-success-900"
         >
           <CheckCircle2 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
           <span>
@@ -50,7 +50,7 @@ export function ResetPasswordPage() {
           </span>
         </div>
       ) : !token ? (
-        <p role="alert" className="mt-7 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+        <p role="alert" className="mt-7 rounded-lg bg-danger-50 p-3 text-sm text-danger-700">
           This page needs the link from your reset email.{' '}
           <a href="/forgot-password" className="font-semibold underline">
             Request a new link
@@ -79,19 +79,19 @@ export function ResetPasswordPage() {
             onChange={(event) => setConfirmPassword(event.target.value)}
           />
           {mismatch && (
-            <p role="alert" className="text-sm text-red-700">
+            <p role="alert" className="text-sm text-danger-700">
               Passwords do not match.
             </p>
           )}
           {result.isError && (
-            <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            <p role="alert" className="rounded-lg bg-danger-50 p-3 text-sm text-danger-700">
               {failure}
             </p>
           )}
           <button
             type="submit"
             disabled={password.length < 12 || mismatch || result.isLoading}
-            className="flex min-h-12 w-full items-center justify-center rounded-xl bg-action px-4 py-3 text-sm font-semibold text-on-action shadow-sm hover:bg-action-hover disabled:opacity-60"
+            className="flex min-h-12 w-full items-center justify-center rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-on-accent shadow-sm hover:bg-accent-hover disabled:opacity-60"
           >
             {result.isLoading ? 'Saving…' : 'Set new password'}
           </button>

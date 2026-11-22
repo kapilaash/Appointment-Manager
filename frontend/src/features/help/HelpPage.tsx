@@ -103,15 +103,15 @@ const coachSteps: GuideStep[] = [
 function GuideCard({ step, index }: { step: GuideStep; index: number }) {
   return (
     <li className="flex gap-3">
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-indigo-50 text-sm font-semibold text-indigo-700">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent-50 text-sm font-semibold text-accent-700">
         {index + 1}
       </span>
       <div className="min-w-0 flex-1">
-        <h4 className="font-medium text-slate-900">{step.title}</h4>
-        <p className="mt-1 text-sm leading-6 text-slate-600">{step.description}</p>
+        <h4 className="font-medium text-neutral-900">{step.title}</h4>
+        <p className="mt-1 text-sm leading-6 text-neutral-600">{step.description}</p>
         <Link
           to={step.to}
-          className="mt-2 inline-flex min-h-11 items-center gap-1 rounded-lg text-sm font-semibold text-indigo-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          className="mt-2 inline-flex min-h-11 items-center gap-1 rounded-lg text-sm font-semibold text-accent-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600"
         >
           {step.action}
           <ArrowRight size={15} aria-hidden="true" />
@@ -130,9 +130,9 @@ export function HelpPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <header>
-        <p className="text-sm font-medium text-indigo-700">Help center</p>
+        <p className="text-sm font-medium text-accent-700">Help center</p>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight text-heading">A clear path through your workspace</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
           Quick guides for the everyday tasks in Thirumal Chess Academy. Your guide is tailored to your{' '}
           {isAdmin ? 'administrator' : 'coach'} role.
         </p>
@@ -141,12 +141,12 @@ export function HelpPage() {
       <div className="grid gap-5 lg:grid-cols-[1.2fr_.8fr]">
         <Card className="p-5 sm:p-6">
           <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-50 text-indigo-700">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-accent-50 text-accent-700">
               <GuideIcon size={19} aria-hidden="true" />
             </span>
             <div>
-              <h3 className="font-semibold text-slate-900">{isAdmin ? 'Administrator guide' : 'Coach guide'}</h3>
-              <p className="mt-0.5 text-sm text-slate-500">Four steps to keep the academy running smoothly</p>
+              <h3 className="font-semibold text-neutral-900">{isAdmin ? 'Administrator guide' : 'Coach guide'}</h3>
+              <p className="mt-0.5 text-sm text-neutral-500">Four steps to keep the academy running smoothly</p>
             </div>
           </div>
           <ol className="mt-6 space-y-5">
@@ -159,12 +159,12 @@ export function HelpPage() {
         <div className="space-y-5">
           <Card className="p-5 sm:p-6">
             <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-50 text-emerald-700">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-success-50 text-success-700">
                 <Clock3 size={19} aria-hidden="true" />
               </span>
-              <h3 className="font-semibold text-slate-900">Time zone tips</h3>
+              <h3 className="font-semibold text-neutral-900">Time zone tips</h3>
             </div>
-            <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
+            <ul className="mt-4 space-y-3 text-sm leading-6 text-neutral-600">
               <li>Availability is stored in the coach’s selected IANA region, including daylight-saving changes.</li>
               <li>Booking times are shown in the coach’s time zone. Check that region before confirming a class.</li>
               <li>Use a date-specific exception for a single holiday instead of changing the weekly schedule.</li>
@@ -172,19 +172,19 @@ export function HelpPage() {
           </Card>
           <Card className="p-5 sm:p-6">
             <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-amber-50 text-amber-700">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-warning-50 text-warning-700">
                 <Mail size={19} aria-hidden="true" />
               </span>
-              <h3 className="font-semibold text-slate-900">Email and delivery</h3>
+              <h3 className="font-semibold text-neutral-900">Email and delivery</h3>
             </div>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
+            <p className="mt-3 text-sm leading-6 text-neutral-600">
               Local development mail appears in Mailpit. Live messages are sent through the production mail account.
               Appointment details include a delivery status and attempt count.
             </p>
             {isAdmin && (
               <Link
                 to="/settings"
-                className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-indigo-700 underline-offset-4 hover:underline"
+                className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent-700 underline-offset-4 hover:underline"
               >
                 Notification setup
                 <ArrowRight size={15} aria-hidden="true" />
@@ -194,16 +194,16 @@ export function HelpPage() {
         </div>
       </div>
 
-      <Card className="border-indigo-200 bg-indigo-50/60 p-5 sm:p-6">
+      <Card className="border-accent-200 bg-accent-50/60 p-5 sm:p-6">
         <div className="flex gap-3">
-          <ShieldCheck className="mt-0.5 shrink-0 text-indigo-700" size={20} aria-hidden="true" />
+          <ShieldCheck className="mt-0.5 shrink-0 text-accent-700" size={20} aria-hidden="true" />
           <div>
-            <h3 className="font-semibold text-slate-900">Protect family information</h3>
-            <p className="mt-1 text-sm leading-6 text-slate-700">
+            <h3 className="font-semibold text-neutral-900">Protect family information</h3>
+            <p className="mt-1 text-sm leading-6 text-neutral-700">
               Use the booking contact address for a parent or guardian when appropriate. Keep instructor notes limited
               to details needed for the class, and avoid putting sensitive information in email or meeting links.
             </p>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-neutral-600">
               For account access, invitations, or a reset link, contact the academy administrator.
             </p>
           </div>

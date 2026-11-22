@@ -52,14 +52,14 @@ export function Dialog({
       onClick={(event) => {
         if (event.target === event.currentTarget && !busy) onClose();
       }}
-      className="m-auto w-[min(92vw,34rem)] rounded-2xl border-0 bg-transparent p-0 shadow-2xl backdrop:bg-slate-950/40 backdrop:backdrop-blur-[2px]"
+      className="m-auto w-[min(92vw,34rem)] rounded-2xl border-0 bg-transparent p-0 shadow-2xl backdrop:bg-ink/40 backdrop:backdrop-blur-[2px]"
     >
-      <section className="dialog-enter rounded-2xl border border-slate-200 bg-surface p-4 sm:p-6">
+      <section className="dialog-enter rounded-2xl border border-neutral-200 bg-surface p-4 sm:p-6">
         <h2 id={titleId} className="text-lg font-semibold text-heading">
           {title}
         </h2>
         {description && (
-          <p id={descriptionId} className="mt-2 text-sm leading-6 text-slate-600">
+          <p id={descriptionId} className="mt-2 text-sm leading-6 text-neutral-600">
             {description}
           </p>
         )}
