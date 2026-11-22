@@ -37,7 +37,8 @@ test('a user can change their password, turn on two-step sign-in, and recover a 
     // --- Change password from the account menu. ---
     await page.getByRole('button', { name: 'Account menu' }).click();
     await page.getByRole('menuitem', { name: 'Password & security' }).click();
-    await expect(page.getByRole('heading', { name: 'Password & security' })).toBeVisible();
+    // First visit to a lazily loaded page; a freshly restarted dev server compiles it now.
+    await expect(page.getByRole('heading', { name: 'Password & security' })).toBeVisible({ timeout: 30_000 });
     await page.getByLabel('Current password', { exact: true }).fill('not my password at all');
     await page.getByLabel('New password', { exact: true }).fill(secondPassword);
     await page.getByLabel('Confirm new password', { exact: true }).fill(secondPassword);
