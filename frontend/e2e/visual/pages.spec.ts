@@ -22,7 +22,8 @@ async function open(page: Page, path: string, ready: string, theme: string) {
   await page.addInitScript((value) => window.localStorage.setItem('thirumal-theme', value), theme);
   await mockApi(page);
   await page.goto(path);
-  await expect(page.getByText(ready, { exact: false }).first()).toBeVisible();
+  // A cold dev server compiles each lazily loaded page on first visit.
+  await expect(page.getByText(ready, { exact: false }).first()).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
   await page.evaluate(() => document.fonts.ready);
 }
@@ -75,4 +76,50 @@ test('sign-in page is accessible', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
   expect(await seriousViolations(page)).toEqual([]);
+});
+
+test.describe('phone bottom sheets', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+  test('dialogs open as a bottom sheet that can be swiped down to close', async ({ page }) => {
+    await open(page, '/appointments', 'Maya Chen', 'light');
+    await page
+      .getByRole('article')
+      .filter({ hasText: 'Maya Chen' })
+      .getByRole('button', { name: 'Cancel', exact: true })
+      .click();
+    const dialog = page.getByRole('dialog', { name: 'Cancel this demo class?' });
+    await expect(dialog).toBeVisible();
+    const box = (await dialog.boundingBox())!;
+    expect(Math.round(box.y + box.height)).toBe(844); // anchored to the bottom edge
+    expect(Math.round(box.width)).toBe(390); // full width
+    await expect(page).toHaveScreenshot('cancel-dialog-light-mobile.png');
+
+    // A short drag springs back; a longer one closes the sheet.
+    const handle = dialog.locator('[aria-hidden="true"]').first();
+    const start = (await handle.boundingBox())!;
+    const drag = async (distance: number) => {
+      await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(start.x + start.width / 2, start.y + distance, { steps: 8 });
+      await page.mouse.up();
+    };
+    await drag(40);
+    await expect(dialog).toBeVisible();
+    await drag(220);
+    await expect(dialog).toBeHidden();
+  });
+
+  test('the More menu can also be swiped away', async ({ page }) => {
+    await open(page, '/', 'Upcoming demos', 'light');
+    await page.getByRole('button', { name: 'More workspace pages' }).click();
+    const menu = page.getByRole('navigation', { name: 'More workspace pages' });
+    await expect(menu).toBeVisible();
+    const handle = (await menu.locator('[aria-hidden="true"]').first().boundingBox())!;
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + 200, { steps: 8 });
+    await page.mouse.up();
+    await expect(menu).toBeHidden();
+  });
 });

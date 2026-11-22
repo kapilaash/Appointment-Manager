@@ -1,6 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { MoreHorizontal, X, type LucideIcon } from 'lucide-react';
+import { useSwipeToDismiss } from '../ui/useSwipeToDismiss';
 
 type WorkspaceLink = { to: string; label: string; icon: LucideIcon; badge?: number };
 
@@ -21,6 +22,7 @@ export function MobileWorkspaceNav({ links }: { links: WorkspaceLink[] }) {
     .filter((link): link is WorkspaceLink => Boolean(link));
   const moreLinks = links.filter((link) => !primaryPaths.includes(link.to));
   const menuOpen = openForPath === location.pathname;
+  const { handleProps, sheetStyle } = useSwipeToDismiss(() => setOpenForPath(null), menuOpen);
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Escape' && menuOpen) {
@@ -42,8 +44,16 @@ export function MobileWorkspaceNav({ links }: { links: WorkspaceLink[] }) {
         id="mobile-more-menu"
         aria-label="More workspace pages"
         hidden={!menuOpen}
+        style={sheetStyle}
         className={`${menuOpen ? 'mobile-sheet-enter' : ''} fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 mx-auto max-h-[70dvh] max-w-xl overflow-y-auto rounded-[1.75rem] border border-neutral-200 bg-surface p-4 shadow-2xl`}
       >
+        <div
+          {...handleProps}
+          aria-hidden="true"
+          className="-mx-4 -mt-2 mb-1 flex cursor-grab justify-center py-2 active:cursor-grabbing"
+        >
+          <span className="h-1.5 w-10 rounded-full bg-neutral-300" />
+        </div>
         <div className="mb-3 flex items-center justify-between px-1">
           <div>
             <p className="text-sm font-semibold text-heading">More</p>

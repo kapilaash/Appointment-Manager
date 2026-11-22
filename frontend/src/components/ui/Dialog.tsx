@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { Button } from './Button';
+import { useSwipeToDismiss } from './useSwipeToDismiss';
 
 type DialogProps = {
   open: boolean;
@@ -32,6 +33,7 @@ export function Dialog({
   // Unique per dialog so two dialogs on one page never share label ids.
   const titleId = useId();
   const descriptionId = useId();
+  const { handleProps, sheetStyle } = useSwipeToDismiss(onClose, !busy);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -52,9 +54,20 @@ export function Dialog({
       onClick={(event) => {
         if (event.target === event.currentTarget && !busy) onClose();
       }}
-      className="m-auto w-[min(92vw,34rem)] rounded-2xl border-0 bg-transparent p-0 shadow-2xl backdrop:bg-ink/40 backdrop:backdrop-blur-[2px]"
+      // Phones: a bottom sheet within thumb reach. Larger screens: a centred dialog.
+      className="m-auto w-[min(92vw,34rem)] rounded-2xl border-0 bg-transparent p-0 shadow-2xl backdrop:bg-ink/40 backdrop:backdrop-blur-[2px] max-sm:bottom-0 max-sm:top-auto max-sm:m-0 max-sm:w-full max-sm:max-w-full max-sm:rounded-b-none"
     >
-      <section className="dialog-enter rounded-2xl border border-neutral-200 bg-surface p-4 sm:p-6">
+      <section
+        style={sheetStyle}
+        className="dialog-enter rounded-2xl border border-neutral-200 bg-surface p-4 max-sm:rounded-b-none max-sm:border-b-0 max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-6"
+      >
+        <div
+          {...handleProps}
+          aria-hidden="true"
+          className="-mx-4 -mt-2 mb-2 flex cursor-grab justify-center py-2 active:cursor-grabbing sm:hidden"
+        >
+          <span className="h-1.5 w-10 rounded-full bg-neutral-300" />
+        </div>
         <h2 id={titleId} className="text-lg font-semibold text-heading">
           {title}
         </h2>

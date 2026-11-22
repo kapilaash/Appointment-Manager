@@ -315,7 +315,24 @@ html[data-theme='dark'] .theme-canvas {
 }
 
 .dialog-enter {
-  animation: dialog-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* backwards (not both): once finished, the drag gesture may move the sheet. */
+  animation: dialog-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes sheet-enter {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Phones: dialogs rise from the bottom edge like a native sheet. */
+@media (max-width: 639px) {
+  .dialog-enter {
+    animation: sheet-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
 }
 
 dialog[open]::backdrop {
@@ -396,7 +413,7 @@ dialog[open]::backdrop {
 }
 
 .mobile-sheet-enter {
-  animation: mobile-sheet-enter 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: mobile-sheet-enter 180ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
   transform-origin: bottom center;
 }
 
