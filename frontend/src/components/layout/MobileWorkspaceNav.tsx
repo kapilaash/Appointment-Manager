@@ -2,7 +2,7 @@ import { useRef, useState, type KeyboardEvent } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { MoreHorizontal, X, type LucideIcon } from 'lucide-react';
 
-type WorkspaceLink = { to: string; label: string; icon: LucideIcon };
+type WorkspaceLink = { to: string; label: string; icon: LucideIcon; badge?: number };
 
 const primaryPaths = ['/', '/calendar', '/appointments', '/availability'];
 const shortLabels: Record<string, string> = {
@@ -59,7 +59,7 @@ export function MobileWorkspaceNav({ links }: { links: WorkspaceLink[] }) {
           </button>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          {moreLinks.map(({ to, label, icon: Icon }) => (
+          {moreLinks.map(({ to, label, icon: Icon, badge = 0 }) => (
             <NavLink
               key={to}
               to={to}
@@ -69,7 +69,7 @@ export function MobileWorkspaceNav({ links }: { links: WorkspaceLink[] }) {
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-700 transition group-hover:bg-white">
                 <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
               </span>
-              <span className="mt-2 text-xs font-semibold leading-tight">{label}</span>
+              <span className="mt-2 flex w-full items-center justify-between gap-1 text-xs font-semibold leading-tight">{label}{badge > 0 && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-900" aria-label={`${badge} waiting`}>{badge}</span>}</span>
             </NavLink>
           ))}
         </div>
@@ -109,6 +109,7 @@ export function MobileWorkspaceNav({ links }: { links: WorkspaceLink[] }) {
           >
             <span className={`grid h-7 w-10 place-items-center rounded-full transition ${menuOpen ? 'bg-indigo-50' : ''}`}>
               {menuOpen ? <X size={20} aria-hidden="true" /> : <MoreHorizontal size={20} aria-hidden="true" />}
+              {!menuOpen && moreLinks.some((link) => (link.badge ?? 0) > 0) && <span className="absolute ml-6 -mt-5 h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />}
             </span>
             <span>More</span>
           </button>

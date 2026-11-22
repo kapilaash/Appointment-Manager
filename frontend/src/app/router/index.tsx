@@ -20,6 +20,7 @@ const CoachRegistrationPage = lazy(() => import('../../features/coaches/CoachReg
 const CoachPasswordResetPage = lazy(() => import('../../features/coaches/CoachPasswordResetPage').then((module) => ({ default: module.CoachPasswordResetPage })));
 const CoachForgotPasswordPage = lazy(() => import('../../features/coaches/CoachForgotPasswordPage').then((module) => ({ default: module.CoachForgotPasswordPage })));
 const ProfilePage = lazy(() => import('../../features/auth/ProfilePage').then((module) => ({ default: module.ProfilePage })));
+const RequestsPage = lazy(() => import('../../features/requests/RequestsPage').then((module) => ({ default: module.RequestsPage })));
 const HelpPage = lazy(() => import('../../features/help/HelpPage').then((module) => ({ default: module.HelpPage })));
 
 // This helper belongs beside the router so all lazy pages share the same loading state.
@@ -71,10 +72,12 @@ export const router = createBrowserRouter([
       { path: 'profile', element: <RouteBoundary><ProfilePage /></RouteBoundary> },
       { path: 'settings', element: <RouteBoundary><SettingsPage /></RouteBoundary> },
       { path: 'help', element: <RouteBoundary><HelpPage /></RouteBoundary> },
+      { path: 'my-requests', element: <RouteBoundary><RequestsPage /></RouteBoundary> },
       {
         element: <AdminOnlyRoutes />,
         children: [
           { path: 'book', element: <RouteBoundary><BookingPage /></RouteBoundary> },
+          { path: 'requests', element: <RouteBoundary><RequestsPage /></RouteBoundary> },
           { path: 'instructors', element: <RouteBoundary><InstructorsPage /></RouteBoundary> },
           { path: 'coaches', element: <RouteBoundary><CoachAdminPage /></RouteBoundary> },
           { path: 'students', element: <RouteBoundary><StudentsPage /></RouteBoundary> },

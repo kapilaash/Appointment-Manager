@@ -109,8 +109,10 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   for (let index = 0; index < 7; index += 1) {
     await instructor.getByRole('button', { name: 'Add hours' }).nth(index).click();
   }
-  await instructor.getByRole('button', { name: 'Save weekly hours' }).click();
-  await expect(instructor.getByText('Weekly availability')).toBeVisible();
+  // Coach changes wait for an administrator; nothing is bookable until approval.
+  await instructor.getByRole('button', { name: 'Submit for approval' }).click();
+  await expect(instructor.getByText(/Weekly hours sent for approval/)).toBeVisible();
+  await expect(instructor.getByText(/is waiting for admin approval/)).toBeVisible();
   await instructor.getByRole('link', { name: 'Settings' }).click();
   await instructor.getByRole('button', { name: 'Classic Chess' }).click();
   await expectTheme(instructor, 'classic', 'rgb(247, 243, 232)', 'rgb(255, 253, 246)');
@@ -121,6 +123,12 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await instructor.close();
 
   await signIn(adminPage, adminEmail, adminPassword);
+  await adminPage.getByRole('link', { name: /^Approvals/ }).click();
+  const weeklyRequest = adminPage.getByRole('article', { name: `Weekly availability change from ${instructorName}` });
+  await expect(weeklyRequest).toBeVisible({ timeout: 30_000 });
+  await weeklyRequest.getByRole('button', { name: 'Approve' }).click();
+  await expect(adminPage.getByText(/^Approved: weekly availability change/)).toBeVisible();
+  await expect(weeklyRequest).toHaveCount(0);
   await adminPage.getByRole('link', { name: 'Settings' }).click();
   await expectTheme(adminPage, 'light', 'rgb(248, 250, 252)', 'rgb(255, 255, 255)');
   await adminPage.getByRole('button', { name: 'Black & White' }).click();

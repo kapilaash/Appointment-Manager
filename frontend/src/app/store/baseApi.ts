@@ -22,6 +22,6 @@ export const baseApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Auth', 'Coaches', 'Instructor', 'Instructors', 'Availability', 'Appointment', 'Appointments', 'Student', 'Students', 'Dashboard', 'DashboardStats'],
+  tagTypes: ['Auth', 'Coaches', 'Instructor', 'Instructors', 'Availability', 'Appointment', 'Appointments', 'Student', 'Students', 'Dashboard', 'DashboardStats', 'ChangeRequests'],
   endpoints: () => ({}),
 });

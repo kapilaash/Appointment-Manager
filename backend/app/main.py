@@ -24,6 +24,7 @@ from app.observability.metrics import (
     API_UPTIME_HEARTBEAT_SUCCESS,
     RequestMetricsMiddleware,
 )
+from app.scheduling.requests_routes import router as change_requests_router
 from app.scheduling.routes import router as scheduling_router
 
 setup_logging()
@@ -89,6 +90,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(coach_admin_router, prefix="/api/v1")
 app.include_router(scheduling_router)
+app.include_router(change_requests_router)
 app.add_middleware(RequestMetricsMiddleware)
 app.mount("/metrics", make_asgi_app())
 

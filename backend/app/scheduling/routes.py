@@ -1,26 +1,30 @@
 import hashlib
 from datetime import UTC, date, datetime, time, timedelta
+from typing import Any
 from urllib.parse import urlsplit
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from redis.exceptions import RedisError
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.auth.dependencies import get_current_user, require_admin
 from app.auth.session_store import get_redis_client
-from app.availability.engine import Interval, generate_slots
+from app.availability.engine import Interval, actual_windows, generate_slots
 from app.db.session import get_db_session
+from app.scheduling import change_requests as cr
 from app.scheduling.models import (
     AcademySetting,
     Appointment,
     AvailabilityException,
     AvailabilityRule,
+    ChangeRequest,
     NotificationEvent,
     OutboxEvent,
     Student,
@@ -58,6 +62,8 @@ class RuleIn(BaseModel):
 
 class AvailabilityIn(BaseModel):
     rules: list[RuleIn] = Field(max_length=80)
+    # Optional context a coach can give the approving administrator.
+    note: str | None = Field(default=None, max_length=1000)
 
 
 class ExceptionIn(BaseModel):
@@ -272,6 +278,226 @@ def _future_slots(slots: list[datetime], *, now: datetime | None = None) -> list
     return [slot for slot in slots if slot > current]
 
 
+def _rule_json(rule: AvailabilityRule | RuleIn) -> dict:
+    return {
+        "day_of_week": rule.day_of_week,
+        "start_local_time": rule.start_local_time.isoformat(),
+        "end_local_time": rule.end_local_time.isoformat(),
+        "effective_from": rule.effective_from.isoformat() if rule.effective_from else None,
+        "effective_until": rule.effective_until.isoformat() if rule.effective_until else None,
+    }
+
+
+def _exception_json(item: AvailabilityException) -> dict:
+    return {
+        "id": str(item.id),
+        "exception_date": item.exception_date.isoformat(),
+        "start_local_time": item.start_local_time.isoformat() if item.start_local_time else None,
+        "end_local_time": item.end_local_time.isoformat() if item.end_local_time else None,
+        "exception_type": item.exception_type,
+        "reason": item.reason,
+    }
+
+
+def _appointment_snapshot(appointment: Appointment) -> dict:
+    student = appointment.__dict__.get("student")
+    return {
+        "starts_at": appointment.starts_at.isoformat(),
+        "ends_at": appointment.ends_at.isoformat(),
+        "student_name": student.name if student else None,
+        "student_timezone": student.timezone if student else None,
+    }
+
+
+# ---- Changes shared by direct admin actions and approved coach requests.
+# These functions stage changes on the session and never commit, so the caller
+# decides the transaction boundary.
+
+def validate_rules(rules: list[RuleIn]) -> list[RuleIn]:
+    ordered = sorted(rules, key=lambda r: (r.day_of_week, r.start_local_time))
+    for i, current in enumerate(ordered):
+        if current.start_local_time >= current.end_local_time:
+            raise HTTPException(422, "End time must be later than start time")
+        for other in ordered[i + 1:]:
+            if other.day_of_week != current.day_of_week:
+                break
+            if other.start_local_time < current.end_local_time:
+                raise HTTPException(422, "Availability intervals overlap")
+    return ordered
+
+
+async def apply_weekly_rules(db: AsyncSession, coach: Instructor, rules: list[RuleIn]) -> list[str]:
+    """Replace the coach's weekly rules and return confirmed bookings now outside them."""
+    rules = validate_rules(rules)
+    now = datetime.now(UTC)
+    future = (await db.scalars(select(Appointment).where(
+        Appointment.instructor_id == coach.id,
+        Appointment.status == "confirmed",
+        Appointment.ends_at >= now,
+    ))).all()
+    existing_exceptions = list((await db.scalars(select(AvailabilityException).where(AvailabilityException.instructor_id == coach.id))).all())
+    affected = []
+    for appointment in future:
+        local_day = appointment.starts_at.astimezone(ZoneInfo(coach.timezone)).date()
+        windows = actual_windows(local_day, coach.timezone, rules, existing_exceptions)  # type: ignore[arg-type]
+        if not any(w.start <= appointment.occupied_from and appointment.occupied_until <= w.end for w in windows):
+            affected.append(str(appointment.id))
+    await db.execute(AvailabilityRule.__table__.delete().where(AvailabilityRule.instructor_id == coach.id))
+    db.add_all([AvailabilityRule(instructor_id=coach.id, **rule.model_dump()) for rule in rules])
+    return affected
+
+
+def validate_exception(data: ExceptionIn) -> None:
+    if data.exception_type not in {"unavailable", "additional_available"}:
+        raise HTTPException(422, "Invalid exception type")
+    if (data.start_local_time is None) != (data.end_local_time is None):
+        raise HTTPException(422, "Provide both local times or leave both blank for all day")
+    if data.start_local_time is not None and data.end_local_time is not None and data.start_local_time >= data.end_local_time:
+        raise HTTPException(422, "End time must be later than start time")
+
+
+async def apply_exception_add(db: AsyncSession, coach: Instructor, data: ExceptionIn) -> tuple[AvailabilityException, list[str]]:
+    validate_exception(data)
+    item = AvailabilityException(instructor_id=coach.id, **data.model_dump())
+    db.add(item)
+    affected: list[str] = []
+    if data.exception_type == "unavailable":
+        local_zone = ZoneInfo(coach.timezone)
+        if data.start_local_time is None or data.end_local_time is None:
+            block_start = datetime.combine(data.exception_date, time.min, local_zone).astimezone(UTC)
+            block_end = datetime.combine(data.exception_date + timedelta(days=1), time.min, local_zone).astimezone(UTC)
+        else:
+            block_start = datetime.combine(data.exception_date, data.start_local_time, local_zone).astimezone(UTC)
+            block_end = datetime.combine(data.exception_date, data.end_local_time, local_zone).astimezone(UTC)
+        rows = (await db.scalars(select(Appointment).where(
+            Appointment.instructor_id == coach.id,
+            Appointment.status == "confirmed",
+            Appointment.occupied_from < block_end,
+            Appointment.occupied_until > block_start,
+        ))).all()
+        affected = [str(row.id) for row in rows]
+    return item, affected
+
+
+async def _supersede_pending(db: AsyncSession, *conditions: Any) -> None:
+    """Retire pending coach requests that an admin action has made obsolete."""
+    await db.execute(
+        update(ChangeRequest)
+        .where(ChangeRequest.status == cr.PENDING, *conditions)
+        .values(status=cr.SUPERSEDED, updated_at=datetime.now(UTC))
+    )
+
+
+async def apply_exception_remove(db: AsyncSession, coach: Instructor, exception_id: UUID) -> None:
+    item = await db.scalar(select(AvailabilityException).where(AvailabilityException.id == exception_id, AvailabilityException.instructor_id == coach.id))
+    if item is None:
+        raise HTTPException(404, "Availability exception not found")
+    await _supersede_pending(db, ChangeRequest.request_type == cr.EXCEPTION_REMOVE, ChangeRequest.exception_id == exception_id)
+    await db.delete(item)
+
+
+async def apply_timezone_change(db: AsyncSession, coach: Instructor, timezone_name: str, country_code: str | None) -> None:
+    coach.timezone = timezone_name
+    coach.country_code = country_code
+    await _queue_coach_search_sync(db, coach.id)
+
+
+async def apply_cancel(db: AsyncSession, appointment: Appointment, reason: str) -> None:
+    if appointment.status == "cancelled":
+        return
+    if appointment.status != "confirmed":
+        raise HTTPException(409, "This appointment can no longer be cancelled")
+    appointment.status = "cancelled"
+    appointment.cancellation_reason = reason
+    db.add(OutboxEvent(
+        event_type="booking.cancelled",
+        aggregate_id=appointment.id,
+        payload={"appointment_id": str(appointment.id), "reason": reason},
+        processing_status="pending",
+        attempt_count=0,
+    ))
+    _queue_appointment_search_sync(db, appointment.id)
+    await _supersede_pending(db, ChangeRequest.appointment_id == appointment.id)
+
+
+async def validated_reschedule_start(db: AsyncSession, appointment: Appointment, starts_at: datetime) -> tuple[datetime, int]:
+    """Check that a confirmed appointment can move to starts_at; return the UTC start and duration."""
+    if appointment.status != "confirmed":
+        raise HTTPException(409, "Only confirmed appointments can be rescheduled")
+    if starts_at.tzinfo is None:
+        raise HTTPException(422, "Appointment start must include a time zone")
+    start = starts_at.astimezone(UTC)
+    duration = int((appointment.ends_at - appointment.starts_at).total_seconds() // 60)
+    coach = await db.get(Instructor, appointment.instructor_id)
+    if coach is None:
+        raise HTTPException(409, "The assigned coach no longer exists")
+    local_date = start.astimezone(ZoneInfo(coach.timezone)).date()
+    if start not in await _slots(db, coach, local_date, local_date, duration, appointment.id):
+        raise HTTPException(409, "This time is no longer available")
+    return start, duration
+
+
+async def apply_reschedule(db: AsyncSession, appointment: Appointment, starts_at: datetime, reason: str) -> None:
+    start, duration = await validated_reschedule_start(db, appointment, starts_at)
+    appointment.starts_at = start
+    appointment.ends_at = start + timedelta(minutes=duration)
+    appointment.reschedule_reason = reason
+    appointment.occupied_from = appointment.starts_at
+    appointment.occupied_until = appointment.ends_at
+    db.add(OutboxEvent(
+        event_type="booking.rescheduled",
+        aggregate_id=appointment.id,
+        payload={
+            "appointment_id": str(appointment.id),
+            "reason": reason,
+            "starts_at": start.isoformat(),
+            "ends_at": appointment.ends_at.isoformat(),
+        },
+        processing_status="pending",
+        attempt_count=0,
+    ))
+    _queue_appointment_search_sync(db, appointment.id)
+    await _supersede_pending(db, ChangeRequest.appointment_id == appointment.id)
+
+
+async def submit_change_request(
+    db: AsyncSession,
+    *,
+    coach: Instructor,
+    user: User,
+    request_type: str,
+    payload: dict,
+    appointment_id: UUID | None = None,
+    exception_id: UUID | None = None,
+    coach_note: str | None = None,
+    replace_pending: bool = False,
+) -> ChangeRequest:
+    """Record a coach request (with any other staged changes), queue admin emails, and commit."""
+    if replace_pending:
+        await _supersede_pending(db, ChangeRequest.instructor_id == coach.id, ChangeRequest.request_type == request_type)
+    note = coach_note.strip() if coach_note and coach_note.strip() else None
+    request = ChangeRequest(
+        instructor_id=coach.id, requested_by=user.id, request_type=request_type, payload=payload,
+        appointment_id=appointment_id, exception_id=exception_id, coach_note=note, status=cr.PENDING,
+    )
+    db.add(request)
+    try:
+        await db.flush()
+        db.add(OutboxEvent(
+            event_type=cr.SUBMITTED_EVENT, aggregate_id=request.id,
+            payload={"change_request_id": str(request.id)}, processing_status="pending", attempt_count=0,
+        ))
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(409, "A matching request is already waiting for admin approval. Refresh to see it.") from exc
+    return request
+
+
+def pending_response(request: ChangeRequest, message: str) -> JSONResponse:
+    return JSONResponse(status_code=202, content={"request_id": str(request.id), "status": cr.PENDING, "message": message})
+
+
 @router.get("/profile")
 async def get_profile(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> dict:
     profile = await db.scalar(select(Instructor).where(Instructor.user_id == user.id)) if user.role == UserRole.INSTRUCTOR else None
@@ -314,6 +540,8 @@ async def integrations(_: User = Depends(require_admin)) -> list[dict]:
 @router.patch("/profile")
 async def update_profile(data: ProfileIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> dict:
     user.full_name = data.full_name.strip()
+    profile: Instructor | None = None
+    pending: ChangeRequest | None = None
     if user.role == UserRole.INSTRUCTOR:
         if data.country_code is None:
             raise HTTPException(422, "Select the coach's country")
@@ -321,15 +549,24 @@ async def update_profile(data: ProfileIn, user: User = Depends(get_current_user)
         if profile is None:
             raise HTTPException(409, "Coach profile is missing")
         profile.display_name = data.display_name.strip()
-        profile.timezone = data.timezone
-        profile.country_code = data.country_code
         if "meeting_url" in data.model_fields_set:
             profile.meeting_url = data.meeting_url
         await _queue_coach_search_sync(db, profile.id)
-    await db.commit()
+        # A time zone or country change moves every weekly slot, so an admin must approve it.
+        if (data.timezone, data.country_code) != (profile.timezone, profile.country_code):
+            pending = await submit_change_request(
+                db, coach=profile, user=user, request_type=cr.TIMEZONE_CHANGE, replace_pending=True,
+                payload={"timezone": data.timezone, "country_code": data.country_code,
+                         "before": {"timezone": profile.timezone, "country_code": profile.country_code}},
+            )
+    if pending is None:
+        await db.commit()
     return {"id": str(user.id), "email": user.email, "full_name": user.full_name, "role": user.role.value,
-            "display_name": data.display_name.strip(), "country_code": data.country_code, "timezone": data.timezone,
-            "meeting_url": profile.meeting_url if user.role == UserRole.INSTRUCTOR and profile else None}
+            "display_name": profile.display_name if profile else user.full_name,
+            "country_code": profile.country_code if profile else None,
+            "timezone": profile.timezone if profile else data.timezone,
+            "meeting_url": profile.meeting_url if profile else None,
+            "pending_request_id": str(pending.id) if pending else None}
 
 
 @router.get("/instructors")
@@ -426,22 +663,35 @@ async def update_instructor(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     coach = await _instructor(db, user, instructor_id)
-    if user.role == UserRole.INSTRUCTOR and data.is_available_for_booking is not None:
+    is_coach = user.role == UserRole.INSTRUCTOR
+    if is_coach and data.is_available_for_booking is not None:
         raise HTTPException(403, "Only an administrator can change booking access")
     if data.display_name is not None:
         coach.display_name = data.display_name.strip()
-    if data.timezone is not None:
-        coach.timezone = data.timezone
-    if data.country_code is not None:
-        coach.country_code = data.country_code
+    new_timezone = data.timezone if data.timezone is not None else coach.timezone
+    new_country = data.country_code if data.country_code is not None else coach.country_code
+    zone_changed = (new_timezone, new_country) != (coach.timezone, coach.country_code)
+    if zone_changed and not is_coach:
+        coach.timezone = new_timezone
+        coach.country_code = new_country
     if "meeting_url" in data.model_fields_set:
         coach.meeting_url = data.meeting_url
     if data.is_available_for_booking is not None:
         coach.is_available_for_booking = data.is_available_for_booking
-    if data.display_name is not None:
+    if data.display_name is not None or zone_changed:
         await _queue_coach_search_sync(db, coach.id)
-    await db.commit()
+    pending: ChangeRequest | None = None
+    if zone_changed and is_coach:
+        # A time zone or country change moves every weekly slot, so an admin must approve it.
+        pending = await submit_change_request(
+            db, coach=coach, user=user, request_type=cr.TIMEZONE_CHANGE, replace_pending=True,
+            payload={"timezone": new_timezone, "country_code": new_country,
+                     "before": {"timezone": coach.timezone, "country_code": coach.country_code}},
+        )
+    else:
+        await db.commit()
     return {
+        "pending_request_id": str(pending.id) if pending else None,
         "id": str(coach.id),
         "display_name": coach.display_name,
         "timezone": coach.timezone,
@@ -456,109 +706,80 @@ async def get_availability(instructor_id: UUID, user: User = Depends(get_current
     coach = await _instructor(db, user, instructor_id)
     rules = (await db.scalars(select(AvailabilityRule).where(AvailabilityRule.instructor_id == coach.id).order_by(AvailabilityRule.day_of_week, AvailabilityRule.start_local_time))).all()
     exceptions = (await db.scalars(select(AvailabilityException).where(AvailabilityException.instructor_id == coach.id).order_by(AvailabilityException.exception_date))).all()
+    pending = (await db.scalars(select(ChangeRequest).where(
+        ChangeRequest.instructor_id == coach.id,
+        ChangeRequest.status == cr.PENDING,
+        ChangeRequest.request_type.in_([cr.WEEKLY_AVAILABILITY, cr.EXCEPTION_ADD, cr.EXCEPTION_REMOVE, cr.TIMEZONE_CHANGE]),
+    ).order_by(ChangeRequest.created_at))).all()
     return {
         "timezone": coach.timezone,
         "country_code": coach.country_code,
-        "rules": [
-            {
-                "id": str(rule.id),
-                "day_of_week": rule.day_of_week,
-                "start_local_time": rule.start_local_time.isoformat(),
-                "end_local_time": rule.end_local_time.isoformat(),
-                "effective_from": rule.effective_from,
-                "effective_until": rule.effective_until,
-            }
-            for rule in rules
-        ],
-        "exceptions": [
+        "rules": [{"id": str(rule.id), **_rule_json(rule)} for rule in rules],
+        "exceptions": [_exception_json(item) for item in exceptions],
+        "pending_requests": [
             {
                 "id": str(item.id),
-                "exception_date": item.exception_date,
-                "start_local_time": item.start_local_time.isoformat() if item.start_local_time else None,
-                "end_local_time": item.end_local_time.isoformat() if item.end_local_time else None,
-                "exception_type": item.exception_type,
-                "reason": item.reason,
+                "request_type": item.request_type,
+                "created_at": item.created_at.isoformat(),
+                "exception_id": str(item.exception_id) if item.exception_id else None,
+                "payload": {key: value for key, value in item.payload.items() if key != "before"},
             }
-            for item in exceptions
+            for item in pending
         ],
     }
 
 
-@router.put("/instructors/{instructor_id}/availability")
-async def replace_availability(instructor_id: UUID, data: AvailabilityIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> dict:
+PRESERVED_WARNING = "Existing bookings were preserved. Review these classes."
+
+
+@router.put("/instructors/{instructor_id}/availability", response_model=None)
+async def replace_availability(instructor_id: UUID, data: AvailabilityIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> dict | JSONResponse:
     coach = await _instructor(db, user, instructor_id)
-    rules = sorted(data.rules, key=lambda r: (r.day_of_week, r.start_local_time))
-    for i, current in enumerate(rules):
-        if current.start_local_time >= current.end_local_time:
-            raise HTTPException(422, "End time must be later than start time")
-        for other in rules[i + 1:]:
-            if other.day_of_week != current.day_of_week:
-                break
-            if other.start_local_time < current.end_local_time:
-                raise HTTPException(422, "Availability intervals overlap")
-    now = datetime.now(UTC)
-    future = (await db.scalars(select(Appointment).where(
-        Appointment.instructor_id == coach.id,
-        Appointment.status == "confirmed",
-        Appointment.ends_at >= now,
-    ))).all()
-    existing_exceptions = list((await db.scalars(select(AvailabilityException).where(AvailabilityException.instructor_id == coach.id))).all())
-    affected = []
-    for appointment in future:
-        local_day = appointment.starts_at.astimezone(ZoneInfo(coach.timezone)).date()
-        from app.availability.engine import actual_windows
-        windows = actual_windows(local_day, coach.timezone, rules, existing_exceptions)
-        if not any(w.start <= appointment.occupied_from and appointment.occupied_until <= w.end for w in windows):
-            affected.append(str(appointment.id))
-    await db.execute(AvailabilityRule.__table__.delete().where(AvailabilityRule.instructor_id == coach.id))
-    db.add_all([AvailabilityRule(instructor_id=coach.id, **rule.model_dump()) for rule in rules])
+    rules = validate_rules(data.rules)
+    if user.role == UserRole.INSTRUCTOR:
+        current = (await db.scalars(select(AvailabilityRule).where(AvailabilityRule.instructor_id == coach.id).order_by(AvailabilityRule.day_of_week, AvailabilityRule.start_local_time))).all()
+        request = await submit_change_request(
+            db, coach=coach, user=user, request_type=cr.WEEKLY_AVAILABILITY, replace_pending=True, coach_note=data.note,
+            payload={"rules": [_rule_json(rule) for rule in rules], "before": {"rules": [_rule_json(rule) for rule in current]}},
+        )
+        return pending_response(request, "Your weekly hours were sent to an administrator for approval.")
+    affected = await apply_weekly_rules(db, coach, rules)
     await db.commit()
-    return {"saved": True, "affected_bookings": affected,
-            "warning": "Existing bookings were preserved. Review these classes." if affected else None}
+    return {"saved": True, "affected_bookings": affected, "warning": PRESERVED_WARNING if affected else None}
 
 
-@router.post("/instructors/{instructor_id}/availability/exceptions", status_code=201)
-async def add_exception(instructor_id: UUID, data: ExceptionIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> dict:
+@router.post("/instructors/{instructor_id}/availability/exceptions", status_code=201, response_model=None)
+async def add_exception(instructor_id: UUID, data: ExceptionIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> dict | JSONResponse:
     coach = await _instructor(db, user, instructor_id)
-    if data.exception_type not in {"unavailable", "additional_available"}:
-        raise HTTPException(422, "Invalid exception type")
-    if (data.start_local_time is None) != (data.end_local_time is None):
-        raise HTTPException(422, "Provide both local times or leave both blank for all day")
-    if data.start_local_time is not None and data.start_local_time >= data.end_local_time:
-        raise HTTPException(422, "End time must be later than start time")
-    item = AvailabilityException(instructor_id=coach.id, **data.model_dump())
-    db.add(item)
-    affected: list[str] = []
-    if data.exception_type == "unavailable":
-        local_zone = ZoneInfo(coach.timezone)
-        if data.start_local_time is None:
-            block_start = datetime.combine(data.exception_date, time.min, local_zone).astimezone(UTC)
-            block_end = datetime.combine(data.exception_date + timedelta(days=1), time.min, local_zone).astimezone(UTC)
-        else:
-            block_start = datetime.combine(data.exception_date, data.start_local_time, local_zone).astimezone(UTC)
-            block_end = datetime.combine(data.exception_date, data.end_local_time, local_zone).astimezone(UTC)
-        rows = (await db.scalars(select(Appointment).where(
-            Appointment.instructor_id == coach.id,
-            Appointment.status == "confirmed",
-            Appointment.occupied_from < block_end,
-            Appointment.occupied_until > block_start,
-        ))).all()
-        affected = [str(row.id) for row in rows]
+    validate_exception(data)
+    if user.role == UserRole.INSTRUCTOR:
+        request = await submit_change_request(
+            db, coach=coach, user=user, request_type=cr.EXCEPTION_ADD, coach_note=data.reason,
+            payload=data.model_dump(mode="json"),
+        )
+        return pending_response(request, "Your request was sent to an administrator for approval.")
+    item, affected = await apply_exception_add(db, coach, data)
     await db.commit()
     await db.refresh(item)
     return {"id": str(item.id), "exception_date": item.exception_date, "exception_type": item.exception_type,
-            "affected_bookings": affected,
-            "warning": "Existing bookings were preserved. Review these classes." if affected else None}
+            "affected_bookings": affected, "warning": PRESERVED_WARNING if affected else None}
 
 
-@router.delete("/instructors/{instructor_id}/availability/exceptions/{exception_id}", status_code=204)
-async def delete_exception(instructor_id: UUID, exception_id: UUID, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> None:
+@router.delete("/instructors/{instructor_id}/availability/exceptions/{exception_id}", status_code=204, response_model=None)
+async def delete_exception(instructor_id: UUID, exception_id: UUID, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> JSONResponse | None:
     coach = await _instructor(db, user, instructor_id)
-    item = await db.scalar(select(AvailabilityException).where(AvailabilityException.id == exception_id, AvailabilityException.instructor_id == coach.id))
-    if item is None:
-        raise HTTPException(404, "Availability exception not found")
-    await db.delete(item)
+    if user.role == UserRole.INSTRUCTOR:
+        item = await db.scalar(select(AvailabilityException).where(AvailabilityException.id == exception_id, AvailabilityException.instructor_id == coach.id))
+        if item is None:
+            raise HTTPException(404, "Availability exception not found")
+        request = await submit_change_request(
+            db, coach=coach, user=user, request_type=cr.EXCEPTION_REMOVE, exception_id=item.id,
+            payload={"exception_id": str(item.id), "before": _exception_json(item)},
+        )
+        return pending_response(request, "Your removal request was sent to an administrator for approval.")
+    await apply_exception_remove(db, coach, exception_id)
     await db.commit()
+    return None
 
 
 @router.get("/instructors/{instructor_id}/available-slots")
@@ -736,7 +957,20 @@ async def list_appointments(
     if start is not None and end is not None:
         query = query.where(Appointment.starts_at < end, Appointment.ends_at > start)
     rows = (await db.scalars(query.order_by(Appointment.starts_at).limit(500))).all()
-    return [await _appointment_out(db, row) for row in rows]
+    pending_by_appointment: dict[UUID, ChangeRequest] = {}
+    if rows:
+        pending_rows = (await db.scalars(select(ChangeRequest).where(
+            ChangeRequest.status == cr.PENDING,
+            ChangeRequest.appointment_id.in_([row.id for row in rows]),
+        ))).all()
+        pending_by_appointment = {item.appointment_id: item for item in pending_rows if item.appointment_id}
+    output = []
+    for row in rows:
+        item = await _appointment_out(db, row)
+        request = pending_by_appointment.get(row.id)
+        item["pending_request"] = {"id": str(request.id), "request_type": request.request_type} if request else None
+        output.append(item)
+    return output
 
 
 @router.post("/appointments/search")
@@ -809,30 +1043,38 @@ async def get_appointment(
     return await _appointment_out(db, appointment)
 
 
-@router.post("/appointments/{appointment_id}/cancel")
+async def _appointment_for_change(db: AsyncSession, user: User, appointment_id: UUID) -> tuple[Appointment, Instructor | None]:
+    """Load an appointment; for coaches also return their profile, hiding other coaches' bookings."""
+    appointment = await db.scalar(
+        select(Appointment).options(selectinload(Appointment.student)).where(Appointment.id == appointment_id)
+    )
+    if appointment is None:
+        raise HTTPException(404, "Appointment not found")
+    if user.role != UserRole.INSTRUCTOR:
+        return appointment, None
+    coach = await db.scalar(select(Instructor).where(Instructor.user_id == user.id))
+    if coach is None or appointment.instructor_id != coach.id:
+        raise HTTPException(404, "Appointment not found")
+    return appointment, coach
+
+
+@router.post("/appointments/{appointment_id}/cancel", response_model=None)
 async def cancel_appointment(
     appointment_id: UUID,
     data: AppointmentCancelIn,
-    admin: User = Depends(require_admin),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session),
-) -> dict[str, str]:
-    appointment = await db.get(Appointment, appointment_id)
-    if appointment is None:
-        raise HTTPException(404, "Appointment not found")
-    if appointment.status == "cancelled":
-        return {"status": "cancelled"}
-    if appointment.status != "confirmed":
-        raise HTTPException(409, "This appointment can no longer be cancelled")
-    appointment.status = "cancelled"
-    appointment.cancellation_reason = data.reason
-    db.add(OutboxEvent(
-        event_type="booking.cancelled",
-        aggregate_id=appointment.id,
-        payload={"appointment_id": str(appointment.id), "reason": data.reason},
-        processing_status="pending",
-        attempt_count=0,
-    ))
-    _queue_appointment_search_sync(db, appointment.id)
+) -> dict[str, str] | JSONResponse:
+    appointment, coach = await _appointment_for_change(db, user, appointment_id)
+    if coach is not None:
+        if appointment.status != "confirmed":
+            raise HTTPException(409, "Only confirmed demos can be cancelled")
+        request = await submit_change_request(
+            db, coach=coach, user=user, request_type=cr.APPOINTMENT_CANCEL, appointment_id=appointment.id,
+            coach_note=data.reason, payload={"reason": data.reason, "before": _appointment_snapshot(appointment)},
+        )
+        return pending_response(request, "Your cancellation request was sent to an administrator for approval.")
+    await apply_cancel(db, appointment, data.reason)
     await db.commit()
     return {"status": "cancelled"}
 
@@ -863,50 +1105,25 @@ async def complete_appointment(
     return {"status": "completed"}
 
 
-@router.post("/appointments/{appointment_id}/reschedule")
+@router.post("/appointments/{appointment_id}/reschedule", response_model=None)
 async def reschedule_appointment(
     appointment_id: UUID,
     data: AppointmentRescheduleIn,
-    admin: User = Depends(require_admin),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session),
-) -> dict:
-    appointment = await db.scalar(
-        select(Appointment).options(selectinload(Appointment.student)).where(Appointment.id == appointment_id)
-    )
-    if appointment is None:
-        raise HTTPException(404, "Appointment not found")
-    if appointment.status != "confirmed":
-        raise HTTPException(409, "Only confirmed appointments can be rescheduled")
-    if data.starts_at.tzinfo is None:
-        raise HTTPException(422, "Appointment start must include a time zone")
-
-    start = data.starts_at.astimezone(UTC)
-    duration = int((appointment.ends_at - appointment.starts_at).total_seconds() // 60)
-    coach = await db.get(Instructor, appointment.instructor_id)
-    if coach is None:
-        raise HTTPException(409, "The assigned coach no longer exists")
-    local_date = start.astimezone(ZoneInfo(coach.timezone)).date()
-    if start not in await _slots(db, coach, local_date, local_date, duration, appointment.id):
-        raise HTTPException(409, "This time is no longer available")
-
-    appointment.starts_at = start
-    appointment.ends_at = start + timedelta(minutes=duration)
-    appointment.reschedule_reason = data.reason
-    appointment.occupied_from = appointment.starts_at
-    appointment.occupied_until = appointment.ends_at
-    db.add(OutboxEvent(
-        event_type="booking.rescheduled",
-        aggregate_id=appointment.id,
-        payload={
-            "appointment_id": str(appointment.id),
-            "reason": data.reason,
-            "starts_at": start.isoformat(),
-            "ends_at": appointment.ends_at.isoformat(),
-        },
-        processing_status="pending",
-        attempt_count=0,
-    ))
-    _queue_appointment_search_sync(db, appointment.id)
+) -> dict | JSONResponse:
+    appointment, coach = await _appointment_for_change(db, user, appointment_id)
+    if coach is not None:
+        # Checked now so coaches only propose open times; checked again when an admin approves.
+        start, duration = await validated_reschedule_start(db, appointment, data.starts_at)
+        request = await submit_change_request(
+            db, coach=coach, user=user, request_type=cr.APPOINTMENT_RESCHEDULE, appointment_id=appointment.id,
+            coach_note=data.reason,
+            payload={"starts_at": start.isoformat(), "ends_at": (start + timedelta(minutes=duration)).isoformat(),
+                     "reason": data.reason, "before": _appointment_snapshot(appointment)},
+        )
+        return pending_response(request, "Your reschedule request was sent to an administrator for approval.")
+    await apply_reschedule(db, appointment, data.starts_at, data.reason)
     try:
         await db.commit()
     except IntegrityError as exc:

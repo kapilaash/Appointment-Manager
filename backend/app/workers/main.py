@@ -19,10 +19,11 @@ from app.observability.error_tracking import (
     configure_error_tracking,
     worker_span,
 )
-from app.scheduling.models import Appointment, NotificationEvent, OutboxEvent
+from app.scheduling import change_requests as cr
+from app.scheduling.models import Appointment, ChangeRequest, NotificationEvent, OutboxEvent
 from app.search.indexing import rebuild_appointment_index, sync_appointment
 from app.search.meili import SEARCH_EVENT_TYPE, ensure_appointment_index
-from app.users.models import Instructor, User
+from app.users.models import Instructor, User, UserRole
 from app.workers.metrics import (
     record_worker_failure,
     record_worker_success,
@@ -68,6 +69,128 @@ def _booking_notification_body(
     )
 
 
+def change_request_email(
+    *,
+    event_type: str,
+    request: ChangeRequest,
+    coach_name: str,
+    coach_timezone: str,
+    reviewer_email: str | None,
+) -> tuple[str, str]:
+    """Return (subject, body) for a change-request email."""
+    label = cr.REQUEST_LABELS.get(request.request_type, "Change request")
+    summary = cr.describe_request(request.request_type, request.payload, coach_timezone)
+    if event_type == cr.SUBMITTED_EVENT:
+        note = f"Coach note: {request.coach_note}\n" if request.coach_note else ""
+        return (
+            f"Approval needed: {label} from {coach_name}",
+            (f"{coach_name} has asked for a change that needs your approval.\n\n"
+            f"Request: {label}\n"
+            f"Details: {summary}\n"
+            f"{note}\n"
+            f"Review it here: {settings.FRONTEND_URL.rstrip('/')}/requests\n"
+            f"Request reference: {request.id}\n"),
+        )
+    outcome = "approved" if request.status == cr.APPROVED else "not approved"
+    note = f"Admin note: {request.review_note}\n" if request.review_note else ""
+    reviewer = f"Reviewed by: {reviewer_email}\n" if reviewer_email else ""
+    return (
+        f"Your request was {outcome}: {label}",
+        (f"Hello {coach_name},\n\n"
+        f"Your request has been {outcome}.\n\n"
+        f"Request: {label}\n"
+        f"Details: {summary}\n"
+        f"{note}{reviewer}\n"
+        f"See your requests: {settings.FRONTEND_URL.rstrip('/')}/my-requests\n"
+        f"Request reference: {request.id}\n"),
+    )
+
+
+async def _send_once(
+    db: Any,
+    *,
+    address: str,
+    subject: str,
+    body: str,
+    event_key: str,
+    event_type: str,
+    change_request_id: Any,
+) -> None:
+    """Send one message per (outbox event, recipient), surviving worker retries."""
+    record_query = select(NotificationEvent).where(
+        NotificationEvent.event_key == event_key,
+        NotificationEvent.recipient == address,
+    )
+    record = await db.scalar(record_query)
+    if record and record.delivery_status == "provider_accepted":
+        return
+    if record is None:
+        record = NotificationEvent(
+            change_request_id=change_request_id,
+            event_type=event_type,
+            event_key=event_key,
+            recipient=address,
+            delivery_status="queued",
+            attempt_count=0,
+        )
+        db.add(record)
+        await db.flush()
+    record.delivery_status = "attempting"
+    record.attempt_count += 1
+    record.last_error = None
+    await db.commit()
+
+    message = build_message(address, subject, body)
+    address_digest = hashlib.sha256(address.strip().lower().encode()).hexdigest()[:16]
+    sender_domain = settings.MAIL_FROM.rpartition("@")[2] or "localhost"
+    message["Message-ID"] = f"<{event_key}.{address_digest}@{sender_domain}>"
+    try:
+        await send_message(message)
+    except Exception as exc:
+        await db.rollback()
+        record = await db.scalar(record_query)
+        if record:
+            record.delivery_status = "queued"
+            record.last_error = type(exc).__name__
+            await db.commit()
+        raise
+    record = await db.scalar(record_query)
+    if record:
+        record.delivery_status = "provider_accepted"
+        record.provider_reference = message["Message-ID"]
+        record.last_error = None
+        await db.commit()
+
+
+async def _deliver_change_request_event(db: Any, *, event_key: str, event_type: str, request_id: Any) -> None:
+    request = await db.get(ChangeRequest, request_id)
+    if request is None:
+        return  # The coach (and their requests) were deleted; nothing left to tell anyone.
+    coach = await db.get(Instructor, request.instructor_id)
+    coach_user = await db.get(User, coach.user_id) if coach else None
+    reviewer = await db.get(User, request.reviewed_by) if request.reviewed_by else None
+    if event_type == cr.SUBMITTED_EVENT:
+        recipients = list((await db.scalars(select(User.email).where(
+            User.role == UserRole.ADMIN, User.is_active.is_(True),
+        ))).all())
+    elif event_type == cr.REVIEWED_EVENT:
+        recipients = [coach_user.email] if coach_user and coach_user.is_active else []
+    else:
+        raise ValueError(f"Unsupported change request event: {event_type}")
+    subject, body = change_request_email(
+        event_type=event_type,
+        request=request,
+        coach_name=coach.display_name if coach else "A coach",
+        coach_timezone=coach.timezone if coach else "UTC",
+        reviewer_email=reviewer.email if reviewer else None,
+    )
+    for address in dict.fromkeys(recipients):
+        await _send_once(
+            db, address=address, subject=subject, body=body, event_key=event_key,
+            event_type=event_type, change_request_id=request.id,
+        )
+
+
 async def _process_outbox(ctx: dict[str, Any]) -> int:
     processed = 0
     for _ in range(25):
@@ -95,99 +218,104 @@ async def _process_outbox(ctx: dict[str, Any]) -> int:
                 appointment_id = event.aggregate_id
                 event_payload = dict(event.payload)
             try:
-                appointment = await db.scalar(
-                    select(Appointment)
-                    .options(selectinload(Appointment.student))
-                    .where(Appointment.id == appointment_id)
-                )
-                if appointment is None:
-                    raise ValueError("Booking no longer exists")
-                instructor = await db.get(Instructor, appointment.instructor_id)
-                coach_user = await db.get(User, instructor.user_id) if instructor else None
-                admin_user = await db.get(User, appointment.created_by)
-                recipients = list(dict.fromkeys(
-                    address for address in (
-                        coach_user.email if coach_user else None,
-                        admin_user.email if admin_user else None,
-                        appointment.student.email if appointment.student else None,
-                    ) if address
-                ))
-                zone_name = appointment.student.timezone if appointment.student else (instructor.timezone if instructor else "UTC")
-                event_start = datetime.fromisoformat(event_payload["starts_at"]) if event_payload.get("starts_at") else appointment.starts_at
-                event_end = datetime.fromisoformat(event_payload["ends_at"]) if event_payload.get("ends_at") else appointment.ends_at
-                start = event_start.astimezone(ZoneInfo(zone_name))
-                end = event_end.astimezone(ZoneInfo(zone_name))
-                coach_start = event_start.astimezone(ZoneInfo(instructor.timezone)) if instructor else event_start
-                coach_end = event_end.astimezone(ZoneInfo(instructor.timezone)) if instructor else event_end
-                event_label = {
-                    "booking.created": "booked",
-                    "booking.rescheduled": "rescheduled",
-                    "booking.cancelled": "cancelled",
-                }.get(event_type)
-                if event_label is None:
-                    raise ValueError(f"Unsupported notification event: {event_type}")
-                subject = f"Chess demo class {event_label}"
-                for address in recipients:
-                    record_query = select(NotificationEvent).where(
-                        NotificationEvent.appointment_id == appointment.id,
-                        NotificationEvent.event_key == event_key,
-                        NotificationEvent.recipient == address,
+                if event_type.startswith(cr.CHANGE_REQUEST_EVENT_PREFIX):
+                    await _deliver_change_request_event(
+                        db, event_key=event_key, event_type=event_type, request_id=appointment_id,
                     )
-                    record = await db.scalar(record_query)
-                    if record and record.delivery_status == "provider_accepted":
-                        continue
-                    if record is None:
-                        record = NotificationEvent(
-                            appointment_id=appointment.id,
-                            event_type=event_type,
-                            event_key=event_key,
-                            recipient=address,
-                            delivery_status="queued",
-                            attempt_count=0,
+                else:
+                    appointment = await db.scalar(
+                        select(Appointment)
+                        .options(selectinload(Appointment.student))
+                        .where(Appointment.id == appointment_id)
+                    )
+                    if appointment is None:
+                        raise ValueError("Booking no longer exists")
+                    instructor = await db.get(Instructor, appointment.instructor_id)
+                    coach_user = await db.get(User, instructor.user_id) if instructor else None
+                    admin_user = await db.get(User, appointment.created_by)
+                    recipients = list(dict.fromkeys(
+                        address for address in (
+                            coach_user.email if coach_user else None,
+                            admin_user.email if admin_user else None,
+                            appointment.student.email if appointment.student else None,
+                        ) if address
+                    ))
+                    zone_name = appointment.student.timezone if appointment.student else (instructor.timezone if instructor else "UTC")
+                    event_start = datetime.fromisoformat(event_payload["starts_at"]) if event_payload.get("starts_at") else appointment.starts_at
+                    event_end = datetime.fromisoformat(event_payload["ends_at"]) if event_payload.get("ends_at") else appointment.ends_at
+                    start = event_start.astimezone(ZoneInfo(zone_name))
+                    end = event_end.astimezone(ZoneInfo(zone_name))
+                    coach_start = event_start.astimezone(ZoneInfo(instructor.timezone)) if instructor else event_start
+                    coach_end = event_end.astimezone(ZoneInfo(instructor.timezone)) if instructor else event_end
+                    event_label = {
+                        "booking.created": "booked",
+                        "booking.rescheduled": "rescheduled",
+                        "booking.cancelled": "cancelled",
+                    }.get(event_type)
+                    if event_label is None:
+                        raise ValueError(f"Unsupported notification event: {event_type}")
+                    subject = f"Chess demo class {event_label}"
+                    for address in recipients:
+                        record_query = select(NotificationEvent).where(
+                            NotificationEvent.appointment_id == appointment.id,
+                            NotificationEvent.event_key == event_key,
+                            NotificationEvent.recipient == address,
                         )
-                        db.add(record)
-                        await db.flush()
-                    record.delivery_status = "attempting"
-                    record.attempt_count += 1
-                    record.last_error = None
-                    await db.commit()
-
-                    message = build_message(
-                        address,
-                        subject,
-                        _booking_notification_body(
-                            event_label=event_label,
-                            student_name=appointment.student.name if appointment.student else "Deleted student",
-                            parent_name=(appointment.student.parent_name or "Not provided") if appointment.student else "Not provided",
-                            contact_email=appointment.student.email if appointment.student else "Removed",
-                            coach_name=instructor.display_name if instructor else "Coach",
-                            student_local_time=f"{start:%A, %B %d, %Y at %I:%M %p %Z} – {end:%I:%M %p %Z}",
-                            coach_local_time=f"{coach_start:%A, %B %d, %Y at %I:%M %p %Z} – {coach_end:%I:%M %p %Z}",
-                            meeting_url=appointment.meeting_url or "Not set",
-                            reason=event_payload.get("reason"),
-                            booking_reference=str(appointment.id),
-                        ),
-                    )
-                    address_digest = hashlib.sha256(address.strip().lower().encode()).hexdigest()[:16]
-                    sender_domain = settings.MAIL_FROM.rpartition("@")[2] or "localhost"
-                    message["Message-ID"] = f"<{event_key}.{address_digest}@{sender_domain}>"
-                    try:
-                        await send_message(message)
-                    except Exception as exc:
-                        await db.rollback()
                         record = await db.scalar(record_query)
-                        if record:
-                            record.delivery_status = "queued"
-                            record.last_error = type(exc).__name__
-                            await db.commit()
-                        raise
-
-                    record = await db.scalar(record_query)
-                    if record:
-                        record.delivery_status = "provider_accepted"
-                        record.provider_reference = message["Message-ID"]
+                        if record and record.delivery_status == "provider_accepted":
+                            continue
+                        if record is None:
+                            record = NotificationEvent(
+                                appointment_id=appointment.id,
+                                event_type=event_type,
+                                event_key=event_key,
+                                recipient=address,
+                                delivery_status="queued",
+                                attempt_count=0,
+                            )
+                            db.add(record)
+                            await db.flush()
+                        record.delivery_status = "attempting"
+                        record.attempt_count += 1
                         record.last_error = None
                         await db.commit()
+
+                        message = build_message(
+                            address,
+                            subject,
+                            _booking_notification_body(
+                                event_label=event_label,
+                                student_name=appointment.student.name if appointment.student else "Deleted student",
+                                parent_name=(appointment.student.parent_name or "Not provided") if appointment.student else "Not provided",
+                                contact_email=appointment.student.email if appointment.student else "Removed",
+                                coach_name=instructor.display_name if instructor else "Coach",
+                                student_local_time=f"{start:%A, %B %d, %Y at %I:%M %p %Z} – {end:%I:%M %p %Z}",
+                                coach_local_time=f"{coach_start:%A, %B %d, %Y at %I:%M %p %Z} – {coach_end:%I:%M %p %Z}",
+                                meeting_url=appointment.meeting_url or "Not set",
+                                reason=event_payload.get("reason"),
+                                booking_reference=str(appointment.id),
+                            ),
+                        )
+                        address_digest = hashlib.sha256(address.strip().lower().encode()).hexdigest()[:16]
+                        sender_domain = settings.MAIL_FROM.rpartition("@")[2] or "localhost"
+                        message["Message-ID"] = f"<{event_key}.{address_digest}@{sender_domain}>"
+                        try:
+                            await send_message(message)
+                        except Exception as exc:
+                            await db.rollback()
+                            record = await db.scalar(record_query)
+                            if record:
+                                record.delivery_status = "queued"
+                                record.last_error = type(exc).__name__
+                                await db.commit()
+                            raise
+
+                        record = await db.scalar(record_query)
+                        if record:
+                            record.delivery_status = "provider_accepted"
+                            record.provider_reference = message["Message-ID"]
+                            record.last_error = None
+                            await db.commit()
 
                 event = await db.get(OutboxEvent, event_id)
                 if event:

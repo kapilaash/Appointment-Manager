@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { formatInTimeZone } from 'date-fns-tz';
-import { BadgeCheck, CalendarClock, CheckCircle2, ExternalLink, Search, X } from 'lucide-react';
+import { BadgeCheck, CalendarClock, CheckCircle2, ExternalLink, Hourglass, Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Dialog } from '../../components/ui/Dialog';
 import { useMeQuery } from '../auth/api';
+import { isPendingReceipt } from '../requests/api';
+import { apiErrorDetail } from '../../lib/apiError';
 import {
   useAppointmentsQuery,
   useSearchAppointmentsQuery,
@@ -20,6 +22,9 @@ export function AppointmentsPage() {
   const currentUser = useMeQuery();
   const canManageBookings = currentUser.data?.role === 'admin';
   const canCompleteBookings = currentUser.data?.role === 'admin' || currentUser.data?.role === 'instructor';
+  // Coaches can ask to cancel or reschedule; an administrator approves before anything changes.
+  const needsApproval = currentUser.data?.role === 'instructor';
+  const canChangeBookings = canManageBookings || needsApproval;
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -59,11 +64,12 @@ export function AppointmentsPage() {
     if (!cancelTarget || cancelReason.trim().length < 3) return;
     setCancelError('');
     try {
-      await cancel({ id: cancelTarget.id, reason: cancelReason.trim() }).unwrap();
+      const result = await cancel({ id: cancelTarget.id, reason: cancelReason.trim() }).unwrap();
+      if (isPendingReceipt(result)) setNotice('Cancellation request sent. The demo stays booked until an administrator approves it.');
       setCancelTarget(null);
       setCancelReason('');
-    } catch {
-      setCancelError('The demo could not be cancelled. Refresh the appointment list and try again.');
+    } catch (error) {
+      setCancelError(apiErrorDetail(error) ?? 'The demo could not be cancelled. Refresh the appointment list and try again.');
     }
   }
 
@@ -104,16 +110,19 @@ export function AppointmentsPage() {
               {item.status === 'cancelled' && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">Cancelled</span>}
               <Button variant="ghost" className="px-3 py-2 text-xs" onClick={() => setSelectedNotifications(selectedNotifications === item.id ? '' : item.id)}>Notifications</Button>
               {canCompleteBookings && item.status === 'confirmed' && new Date(item.ends_at).getTime() <= Date.now() && <Button variant="secondary" className="px-3 py-2 text-xs" disabled={completeResult.isLoading} onClick={() => { setCompleteTarget(item); setCompleteError(''); }}><BadgeCheck size={15} />Mark completed</Button>}
-              {canManageBookings && item.status === 'confirmed' && <><Button variant="secondary" className="px-3 py-2 text-xs" onClick={() => navigate(`/calendar?reschedule=${encodeURIComponent(item.id)}`)}><CalendarClock size={14} />Reschedule</Button><Button variant="ghost" className="px-3 py-2 text-xs text-rose-700" disabled={cancelResult.isLoading} onClick={() => openCancelDialog(item)}><X size={14} />Cancel</Button></>}
+              {item.pending_request && <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-900"><Hourglass size={13} aria-hidden="true" />{item.pending_request.request_type === 'appointment_cancel' ? 'Cancellation awaiting approval' : 'Reschedule awaiting approval'}</span>}
+              {canChangeBookings && item.status === 'confirmed' && !(needsApproval && item.pending_request) && <><Button variant="secondary" className="px-3 py-2 text-xs" onClick={() => navigate(`/calendar?reschedule=${encodeURIComponent(item.id)}`)}><CalendarClock size={14} />{needsApproval ? 'Request reschedule' : 'Reschedule'}</Button><Button variant="ghost" className="px-3 py-2 text-xs text-rose-700" disabled={cancelResult.isLoading} onClick={() => openCancelDialog(item)}><X size={14} />{needsApproval ? 'Request cancellation' : 'Cancel'}</Button></>}
             </div>
           </article>)}</div> : <div className="p-14 text-center text-sm text-slate-500">{normalizedSearch.length === 1 ? 'Type one more character to search appointments.' : 'No appointments match this view.'}</div>}
       {selectedNotifications && <div className="border-t border-slate-100 bg-slate-50 p-5"><h3 className="text-sm font-semibold text-slate-900">Notification status</h3>{notifications.isLoading ? <p className="mt-2 text-sm text-slate-500">Loading…</p> : notifications.data?.length ? <div className="mt-3 grid gap-2 sm:grid-cols-3">{notifications.data.map((item, index) => <div key={`${item.event_type}-${item.recipient}-${index}`} className="rounded-lg border border-slate-200 bg-surface p-3"><p className="truncate text-xs text-slate-600">{item.recipient}</p><p className="mt-1 text-xs font-medium capitalize text-slate-900">{item.event_type} · {item.delivery_status.replace('_', ' ')}</p><p className="mt-1 text-[11px] text-slate-400">Attempts: {item.attempt_count}</p></div>)}</div> : <p className="mt-2 text-sm text-slate-500">No notification attempts recorded yet.</p>}</div>}
     </Card>
     <Dialog
-      open={canManageBookings && Boolean(cancelTarget)}
-      title="Cancel this demo class?"
-      description={cancelTarget ? `Cancel the class for ${cancelTarget.student?.name ?? 'Deleted student'} with ${cancelTarget.instructor_name}. The cancellation reason will be saved and included in the email update.` : undefined}
-      confirmLabel="Cancel demo class"
+      open={canChangeBookings && Boolean(cancelTarget)}
+      title={needsApproval ? 'Ask to cancel this demo class?' : 'Cancel this demo class?'}
+      description={cancelTarget ? (needsApproval
+        ? `An administrator will review your request to cancel the class for ${cancelTarget.student?.name ?? 'Deleted student'}. The demo stays booked until it is approved, and the family is only told after approval.`
+        : `Cancel the class for ${cancelTarget.student?.name ?? 'Deleted student'} with ${cancelTarget.instructor_name}. The cancellation reason will be saved and included in the email update.`) : undefined}
+      confirmLabel={needsApproval ? 'Send for approval' : 'Cancel demo class'}
       cancelLabel="Keep editing"
       destructive
       busy={cancelResult.isLoading}

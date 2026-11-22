@@ -1,4 +1,5 @@
 import { api } from '../../app/store/api';
+import type { ChangeRequestType, PendingReceipt } from '../requests/api';
 
 export type Student = { id: string; name: string; parent_name?: string | null; email: string; phone?: string | null; country_code: string | null; timezone: string };
 export type Appointment = {
@@ -15,6 +16,8 @@ export type Appointment = {
   meeting_url?: string | null;
   student: Student | null;
   instructor_name: string;
+  /** A coach's cancel/reschedule request waiting for an administrator (list endpoint only). */
+  pending_request?: { id: string; request_type: Extract<ChangeRequestType, 'appointment_cancel' | 'appointment_reschedule'> } | null;
 };
 export type PublicBookingReceipt = { id: string; starts_at: string; ends_at: string; status: 'confirmed'; meeting_url?: null };
 
@@ -56,13 +59,13 @@ export const appointmentApi = api.injectEndpoints({
       query: ({ idempotencyKey, ...body }) => ({ url: '/public/appointments', method: 'POST', body, headers: { 'Idempotency-Key': idempotencyKey } }),
       invalidatesTags: ['Appointment', 'Availability', 'Dashboard'],
     }),
-    cancelAppointment: build.mutation<{ status: string }, { id: string; reason: string }>({
+    cancelAppointment: build.mutation<{ status: string } | PendingReceipt, { id: string; reason: string }>({
       query: ({ id, reason }) => ({ url: `/appointments/${id}/cancel`, method: 'POST', body: { reason } }),
-      invalidatesTags: ['Appointment', 'Availability', 'Dashboard'],
+      invalidatesTags: ['Appointment', 'Availability', 'Dashboard', 'ChangeRequests'],
     }),
-    rescheduleAppointment: build.mutation<Appointment, { id: string; starts_at: string; reason: string }>({
+    rescheduleAppointment: build.mutation<Appointment | PendingReceipt, { id: string; starts_at: string; reason: string }>({
       query: ({ id, ...body }) => ({ url: `/appointments/${id}/reschedule`, method: 'POST', body }),
-      invalidatesTags: ['Appointment', 'Availability', 'Dashboard'],
+      invalidatesTags: ['Appointment', 'Availability', 'Dashboard', 'ChangeRequests'],
     }),
     completeAppointment: build.mutation<{ status: string }, string>({
       query: (id) => ({ url: `/appointments/${id}/complete`, method: 'POST' }),

@@ -7,14 +7,16 @@ type GuideStep = { title: string; description: string; to: string; action: strin
 
 const adminSteps: GuideStep[] = [
   { title: 'Invite your coaching team', description: 'Create a coach invitation using the email address they will use to sign in. The one-time link expires after 48 hours.', to: '/coaches', action: 'Manage coach accounts' },
-  { title: 'Keep availability current', description: 'Coaches set weekly hours in their own time zone. Date-specific exceptions handle holidays and one-off schedule changes.', to: '/availability', action: 'Review availability' },
+  { title: 'Keep availability current', description: 'Coaches set weekly hours in their own time zone. Date-specific exceptions handle holidays and one-off schedule changes. Changes you make here apply immediately.', to: '/availability', action: 'Review availability' },
+  { title: 'Approve coach requests', description: 'When a coach changes their hours, time off, extra hours, or time zone, or asks to cancel or reschedule a demo, nothing changes until you approve it. Every admin is emailed; the coach is emailed your decision.', to: '/requests', action: 'Open approvals' },
   { title: 'Book a demo class', description: 'Choose an available coach and time, then add the student or parent contact email for updates.', to: '/book', action: 'Create a booking' },
   { title: 'Track changes and messages', description: 'Use the calendar for upcoming sessions. Appointment details show cancellation, reschedule, and email delivery history.', to: '/appointments', action: 'Open appointments' },
 ];
 
 const coachSteps: GuideStep[] = [
   { title: 'Complete your profile', description: 'Set the country and IANA time zone where you coach. Availability and appointment times follow this region’s daylight-saving rules.', to: '/profile', action: 'Edit your profile' },
-  { title: 'Set your teaching hours', description: 'Save weekly availability and add date-specific time off or extra hours. Existing bookings remain visible when your schedule changes.', to: '/availability', action: 'Manage availability' },
+  { title: 'Set your teaching hours', description: 'Propose weekly hours, time off, or extra hours. An administrator approves each change before families can book it, and you are emailed the decision.', to: '/availability', action: 'Manage availability' },
+  { title: 'Need to move or cancel a demo?', description: 'Open the demo and choose Request reschedule or Request cancellation. The booking stays as it is until an administrator approves, and the family is only told after approval.', to: '/my-requests', action: 'See my requests' },
   { title: 'Review your classes', description: 'Open the calendar or appointments list to check student details, meeting links, and updates. You can mark an ended demo as completed.', to: '/calendar', action: 'View your calendar' },
   { title: 'Choose a comfortable workspace', description: 'Change the appearance theme at any time. Your choice is saved in this browser for your account.', to: '/settings', action: 'Open settings' },
 ];

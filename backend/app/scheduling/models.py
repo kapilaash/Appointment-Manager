@@ -122,9 +122,65 @@ class OutboxEvent(Base, UUIDPrimaryKeyMixin):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 
 
+class ChangeRequest(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    """A coach-submitted change that only takes effect after an administrator approves it."""
+
+    __tablename__ = "change_requests"
+    instructor_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("instructors.id", ondelete="CASCADE"), nullable=False, index=True)
+    requested_by: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id", ondelete="SET NULL"))
+    request_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    # The proposed change plus a "before" snapshot taken when the request was submitted.
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    appointment_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("appointments.id", ondelete="SET NULL"))
+    exception_id: Mapped[UUID | None] = mapped_column(Uuid)
+    coach_note: Mapped[str | None] = mapped_column(String(1000))
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    reviewed_by: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id", ondelete="SET NULL"))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_note: Mapped[str | None] = mapped_column(String(1000))
+    __table_args__ = (
+        CheckConstraint(
+            "request_type in ('weekly_availability', 'exception_add', 'exception_remove', "
+            "'timezone_change', 'appointment_cancel', 'appointment_reschedule')",
+            name=conv("ck_change_requests_type"),
+        ),
+        CheckConstraint(
+            "status in ('pending', 'approved', 'rejected', 'withdrawn', 'superseded')",
+            name=conv("ck_change_requests_status"),
+        ),
+        Index("ix_change_requests_status_created", "status", "created_at"),
+        Index(
+            "uq_change_requests_pending_weekly",
+            "instructor_id",
+            unique=True,
+            postgresql_where=text("status = 'pending' AND request_type = 'weekly_availability'"),
+        ),
+        Index(
+            "uq_change_requests_pending_timezone",
+            "instructor_id",
+            unique=True,
+            postgresql_where=text("status = 'pending' AND request_type = 'timezone_change'"),
+        ),
+        Index(
+            "uq_change_requests_pending_appointment",
+            "appointment_id",
+            unique=True,
+            postgresql_where=text("status = 'pending' AND appointment_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_change_requests_pending_exception_remove",
+            "exception_id",
+            unique=True,
+            postgresql_where=text("status = 'pending' AND request_type = 'exception_remove'"),
+        ),
+    )
+
+
 class NotificationEvent(Base, UUIDPrimaryKeyMixin):
     __tablename__ = "notification_events"
-    appointment_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("appointments.id", ondelete="CASCADE"), nullable=False, index=True)
+    # Exactly one of appointment_id / change_request_id identifies what the message is about.
+    appointment_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("appointments.id", ondelete="CASCADE"), nullable=True, index=True)
+    change_request_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("change_requests.id", ondelete="CASCADE"), nullable=True, index=True)
     event_type: Mapped[str] = mapped_column(String(60), nullable=False)
     event_key: Mapped[str] = mapped_column(String(36), nullable=False)
     recipient: Mapped[str] = mapped_column(String(320), nullable=False)
@@ -135,7 +191,11 @@ class NotificationEvent(Base, UUIDPrimaryKeyMixin):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=text("now()"))
     __table_args__ = (
-        Index("uq_notification_event_recipient", "appointment_id", "event_key", "recipient", unique=True),
+        Index("uq_notification_event_recipient", "event_key", "recipient", unique=True),
+        CheckConstraint(
+            "(appointment_id IS NULL) <> (change_request_id IS NULL)",
+            name=conv("ck_notification_events_subject"),
+        ),
     )
 
 
