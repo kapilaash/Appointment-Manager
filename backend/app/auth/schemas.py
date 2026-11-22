@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -54,6 +55,9 @@ class CoachPasswordResetIn(CoachInvitationTokenIn):
     password: str = Field(min_length=12, max_length=128)
 
 
+ThemePreference = Literal["light", "classic", "dark", "system"]
+
+
 class InstructorProfileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -72,7 +76,12 @@ class UserResponse(BaseModel):
     full_name: str
     role: UserRole
     is_active: bool
+    theme_preference: ThemePreference | None = None
     instructor_profile: InstructorProfileResponse | None = None
+
+
+class PreferencesIn(BaseModel):
+    theme: ThemePreference
 
 
 class MessageResponse(BaseModel):

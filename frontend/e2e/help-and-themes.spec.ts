@@ -15,6 +15,9 @@ const coach = {
 
 async function mockWorkspace(page: import('@playwright/test').Page, user: typeof admin | typeof coach) {
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: user }));
+  await page.route('**/api/v1/auth/me/preferences', async (route) => route.fulfill({
+    json: { ...user, theme_preference: (route.request().postDataJSON() as { theme: string }).theme },
+  }));
   await page.route('**/api/v1/change-requests/pending-count', (route) => route.fulfill({ json: { pending: 0 } }));
   await page.route('**/api/v1/settings', (route) => route.fulfill({
     json: { demo_duration_minutes: 60, slot_interval_minutes: 30, buffer_before_minutes: 0, buffer_after_minutes: 0 },
@@ -31,25 +34,37 @@ test('admins can change themes and find role-specific workflow help on desktop a
   await page.goto('/settings', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { name: 'Settings', level: 2 })).toBeVisible();
-  const themeGroup = page.getByRole('group', { name: 'Workspace theme' }).last();
+  const themeGroup = page.getByRole('radiogroup', { name: 'Workspace theme' });
   await expect(themeGroup).toBeVisible();
   const themes = [
     ['light', 'Studio', 'rgb(248, 250, 252)'],
     ['classic', 'Classic Chess', 'rgb(247, 243, 232)'],
     ['dark', 'Black & White', 'rgb(9, 9, 11)'],
   ] as const;
-  await expect(page.getByRole('button', { name: /Studio/i })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: /Classic Chess/i })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: /Black & White/i })).toHaveCount(1);
-  await expect(themeGroup.getByRole('button')).toHaveCount(3);
+  await expect(themeGroup.getByRole('radio')).toHaveCount(4);
+  const savedThemes: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().endsWith('/api/v1/auth/me/preferences')) savedThemes.push((request.postDataJSON() as { theme: string }).theme);
+  });
   for (const [theme, label, background] of themes) {
-    const button = page.getByRole('button', { name: new RegExp(label, 'i') });
-    await button.click();
+    const radio = themeGroup.getByRole('radio', { name: new RegExp(label, 'i') });
+    await radio.check();
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
-    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect(radio).toBeChecked();
     await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(background);
   }
-  expect(await page.evaluate(() => localStorage.getItem('thirumal-appearance:admin-theme-test'))).toBe('dark');
+  expect(await page.evaluate(() => localStorage.getItem('thirumal-theme'))).toBe('dark');
+  // The choice is saved to the account so it follows the user to other devices.
+  // Studio is the default, so re-selecting it saves nothing; each real change is saved once.
+  await expect.poll(() => savedThemes).toEqual(['classic', 'dark']);
+
+  // "Match my device" follows the operating system's light/dark setting live.
+  await page.emulateMedia({ colorScheme: 'light' });
+  await themeGroup.getByRole('radio', { name: /Match my device/i }).check();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await themeGroup.getByRole('radio', { name: /Black & White/i }).check();
 
   await page.getByRole('link', { name: 'Help & guides' }).click();
   await expect(page.getByRole('heading', { name: 'Administrator guide' })).toBeVisible();
@@ -74,6 +89,16 @@ test('admins can change themes and find role-specific workflow help on desktop a
   await expect(page.getByRole('heading', { name: 'Settings', level: 2 })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   expect(browserErrors).toEqual([]);
+});
+
+test('the saved theme is painted before the app loads, so there is no light flash', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('thirumal-theme', 'dark'));
+  // Block the application bundle: only public/theme-init.js can set the theme now.
+  await page.route('**/src/main.tsx', (route) => route.abort());
+  await page.route('**/assets/index-*.js', (route) => route.abort());
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#09090b');
 });
 
 test('coaches receive coach guidance and only their permitted pages in mobile navigation', async ({ page }) => {

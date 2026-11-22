@@ -1,63 +1,122 @@
-import { createContext, useContext, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
+import { useSaveThemePreferenceMutation } from '../auth/api';
 
+/** A concrete palette applied to the page. */
 export type AppTheme = 'light' | 'classic' | 'dark';
+/** What the user chose; "system" follows the device's light/dark setting. */
+export type ThemePreference = AppTheme | 'system';
 
 type AppearanceContextValue = {
+  preference: ThemePreference;
   theme: AppTheme;
-  setTheme: (theme: AppTheme) => void;
+  setPreference: (preference: ThemePreference) => void;
 };
+
+/** Device-wide cache read by public/theme-init.js before React loads. Keep the key in sync. */
+const STORAGE_KEY = 'thirumal-theme';
+const THEME_COLORS: Record<AppTheme, string> = { light: '#f8fafc', classic: '#f7f3e8', dark: '#09090b' };
+const PREFERENCES: ThemePreference[] = ['light', 'classic', 'dark', 'system'];
+/** Long enough to feel calm; must match the view-transition duration in globals.css. */
+const TRANSITION_MS = 700;
 
 const AppearanceContext = createContext<AppearanceContextValue | null>(null);
-const validThemes: AppTheme[] = ['light', 'classic', 'dark'];
-const legacyThemes: Record<string, AppTheme> = {
-  ocean: 'light',
-  lavender: 'light',
-  wood: 'light',
-  graphite: 'light',
-  espresso: 'light',
-};
+const darkQuery = () => window.matchMedia('(prefers-color-scheme: dark)');
 
-function storageKey(userId: string) {
-  return `thirumal-appearance:${userId}`;
+function isPreference(value: unknown): value is ThemePreference {
+  return typeof value === 'string' && PREFERENCES.includes(value as ThemePreference);
 }
 
-function readTheme(userId: string): AppTheme {
+function readStoredPreference(userId: string): ThemePreference {
   try {
-    const savedTheme = window.localStorage.getItem(storageKey(userId));
-    if (validThemes.includes(savedTheme as AppTheme)) return savedTheme as AppTheme;
-    return savedTheme ? legacyThemes[savedTheme] ?? 'light' : 'light';
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (isPreference(stored)) return stored;
+    // One-time migration from the earlier per-user, browser-only key.
+    const legacy = window.localStorage.getItem(`thirumal-appearance:${userId}`);
+    if (isPreference(legacy)) return legacy;
   } catch {
-    return 'light';
+    // Storage can be unavailable (private mode, blocked cookies); fall back to the default.
   }
+  return 'light';
 }
 
-export function ThemeProvider({ userId, children }: { userId: string; children: ReactNode }) {
-  const [theme, setTheme] = useState<AppTheme>(() => readTheme(userId));
+function subscribeToDeviceScheme(onChange: () => void) {
+  const query = darkQuery();
+  query.addEventListener('change', onChange);
+  return () => query.removeEventListener('change', onChange);
+}
 
-  useLayoutEffect(() => {
-    const root = document.documentElement;
-    const switchingTheme = Boolean(root.dataset.theme && root.dataset.theme !== theme);
-    if (switchingTheme) {
-      root.classList.add('theme-transitioning');
-      // Commit transition rules against the old tokens before changing them.
-      window.getComputedStyle(root).getPropertyValue('--surface');
-    }
+function prefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * Apply a palette. Theme changes cross-fade slowly so the switch is easy on the eyes:
+ * the View Transitions API fades one composited snapshot of the page (cheap, even on
+ * busy pages); older browsers fall back to a short CSS colour transition on surfaces.
+ */
+function applyTheme(theme: AppTheme) {
+  const root = document.documentElement;
+  if (root.dataset.theme === theme) return;
+  const commit = () => {
     root.dataset.theme = theme;
     root.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
-    const transitionTimer = switchingTheme
-      ? window.setTimeout(() => root.classList.remove('theme-transitioning'), 300)
-      : undefined;
-    try {
-      window.localStorage.setItem(storageKey(userId), theme);
-    } catch {
-      // The selected theme still applies for this session when storage is unavailable.
-    }
-    return () => {
-      if (transitionTimer !== undefined) window.clearTimeout(transitionTimer);
-    };
-  }, [theme, userId]);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[theme]);
+  };
+  if (!root.dataset.theme || prefersReducedMotion()) {
+    commit();
+    return;
+  }
+  if (typeof document.startViewTransition === 'function') {
+    root.classList.add('theme-view-transition');
+    const transition = document.startViewTransition(() => flushSync(commit));
+    void transition.finished.finally(() => root.classList.remove('theme-view-transition'));
+    return;
+  }
+  root.classList.add('theme-transitioning');
+  // Read a style so the transition rules attach before the colour tokens change.
+  window.getComputedStyle(root).getPropertyValue('--surface');
+  commit();
+  window.setTimeout(() => root.classList.remove('theme-transitioning'), TRANSITION_MS);
+}
 
-  const value = useMemo(() => ({ theme, setTheme }), [theme]);
+export function ThemeProvider({ userId, savedPreference, children }: {
+  userId: string;
+  /** The preference stored on the account, so it follows the user across devices. */
+  savedPreference: ThemePreference | null | undefined;
+  children: ReactNode;
+}) {
+  const [preference, setPreferenceState] = useState<ThemePreference>(() => savedPreference ?? readStoredPreference(userId));
+  // Adopt a preference saved on another device when the account data refreshes.
+  const [lastServerPreference, setLastServerPreference] = useState(savedPreference);
+  if (savedPreference !== lastServerPreference) {
+    setLastServerPreference(savedPreference);
+    if (savedPreference) setPreferenceState(savedPreference);
+  }
+  const deviceIsDark = useSyncExternalStore(subscribeToDeviceScheme, () => darkQuery().matches, () => false);
+  const theme: AppTheme = preference === 'system' ? (deviceIsDark ? 'dark' : 'light') : preference;
+  const [savePreference] = useSaveThemePreferenceMutation();
+
+  useLayoutEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  // Cache on this device so the next visit (and the sign-in page) paints the right theme at once.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, preference);
+    } catch {
+      // The theme still applies for this visit when storage is unavailable.
+    }
+  }, [preference]);
+
+  const setPreference = useCallback((next: ThemePreference) => {
+    setPreferenceState(next);
+    // Saving to the account is best effort; the local choice already applies.
+    void savePreference({ theme: next }).unwrap().catch(() => undefined);
+  }, [savePreference]);
+
+  const value = useMemo(() => ({ preference, theme, setPreference }), [preference, theme, setPreference]);
   return <AppearanceContext.Provider value={value}>{children}</AppearanceContext.Provider>;
 }
 

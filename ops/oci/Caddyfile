@@ -8,7 +8,7 @@
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 		-Server
 	}
-	@client_booking path /book-demo /book-demo/* /assets/* /favicon.svg /api/v1/public/*
+	@client_booking path /book-demo /book-demo/* /assets/* /favicon.svg /theme-init.js /api/v1/public/*
 	handle @client_booking {
 		reverse_proxy frontend:80
 	}

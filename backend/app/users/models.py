@@ -1,9 +1,10 @@
 import enum
 import uuid
 
-from sqlalchemy import Boolean, Enum, ForeignKey, String, Text
+from sqlalchemy import Boolean, CheckConstraint, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.schema import conv
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
@@ -29,6 +30,15 @@ class User(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Appearance theme saved to the account so it follows the user across devices (null = default).
+    theme_preference: Mapped[str | None] = mapped_column(String(16))
+
+    __table_args__ = (
+        CheckConstraint(
+            "theme_preference IS NULL OR theme_preference IN ('light', 'classic', 'dark', 'system')",
+            name=conv("ck_users_theme_preference"),
+        ),
+    )
 
     instructor_profile: Mapped["Instructor"] = relationship("Instructor", back_populates="user", uselist=False, cascade="all, delete-orphan")
 

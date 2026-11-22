@@ -13,10 +13,12 @@ from uuid import uuid4
 
 import httpx
 import pytest
+from fastapi import Depends
 from sqlalchemy import create_engine, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import selectinload
 
 from app.auth.dependencies import get_current_user
 from app.db.base import Base
@@ -101,7 +103,15 @@ async def world(sessions: async_sessionmaker[AsyncSession]) -> SimpleNamespace:
             yield session
 
     app.dependency_overrides[get_db_session] = override_session
-    app.dependency_overrides[get_current_user] = lambda: acting.user
+    async def override_user(db: AsyncSession = Depends(get_db_session)) -> User:
+        # Like production: the user is loaded in the request's own session, so route changes persist.
+        user = await db.scalar(
+            select(User).options(selectinload(User.instructor_profile)).where(User.id == acting.user.id)
+        )
+        assert user is not None
+        return user
+
+    app.dependency_overrides[get_current_user] = override_user
     world = SimpleNamespace(
         admin=admin, coach_user=coach_user, other_user=other_user, coach=coach, other=other,
         appointment=appointment, demo_day=demo_day, acting=acting, sessions=sessions,
@@ -356,3 +366,13 @@ async def test_dashboard_counts_today_in_the_viewers_time_zone(world, client) ->
     kiritimati_today = (await client.get("/api/v1/dashboard/summary", params={"timezone": "Pacific/Kiritimati"})).json()["today_appointments"]
     assert utc_today >= 1
     assert kiritimati_today < utc_today
+
+
+async def test_theme_preference_is_saved_to_the_account(world, client) -> None:
+    act_as(world, world.coach_user)
+    assert (await client.get("/api/v1/auth/me")).json()["theme_preference"] is None
+    assert (await client.put("/api/v1/auth/me/preferences", json={"theme": "neon"})).status_code == 422
+    saved = await client.put("/api/v1/auth/me/preferences", json={"theme": "system"})
+    assert saved.status_code == 200 and saved.json()["theme_preference"] == "system"
+    async with world.sessions() as db:
+        assert (await db.get(User, world.coach_user.id)).theme_preference == "system"

@@ -77,7 +77,7 @@ export function App() {
     .map((link) => ({ ...link, badge: link.to === requestsPath ? pendingCount : 0 }));
   const title = links.find((link) => link.to === location.pathname)?.label ?? 'Workspace';
   return (
-    <ThemeProvider userId={auth.data.id}>
+    <ThemeProvider userId={auth.data.id} savedPreference={auth.data.theme_preference}>
     <div className="theme-canvas min-h-screen bg-slate-50">
       <a href="#main-content" className="sr-only z-50 rounded-md bg-surface p-3 text-indigo-700 focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:shadow-lg">Skip to main content</a>
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col overflow-y-auto border-r border-slate-200 bg-surface lg:flex">

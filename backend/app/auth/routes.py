@@ -25,6 +25,7 @@ from app.auth.schemas import (
     CoachRegistrationIn,
     LoginRequest,
     MessageResponse,
+    PreferencesIn,
     UserResponse,
 )
 from app.auth.session_store import SessionStore, get_redis_client
@@ -193,6 +194,17 @@ async def logout(
 
 @router.get("/me", response_model=UserResponse)
 async def get_my_profile(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.put("/me/preferences", response_model=UserResponse)
+async def update_my_preferences(
+    payload: PreferencesIn,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+):
+    current_user.theme_preference = payload.theme
+    await db.commit()
     return current_user
 
 

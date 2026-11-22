@@ -336,17 +336,32 @@ html[data-theme='dark'] .theme-canvas {
 .calendar-theme .fc .fc-popover { border-color: rgb(var(--slate-300)); background: rgb(var(--surface)); color: rgb(var(--slate-900)); box-shadow: 0 12px 32px rgb(0 0 0 / 18%); }
 .calendar-theme .fc .fc-popover-header { background: rgb(var(--slate-100)); color: rgb(var(--slate-800)); }
 
+/*
+ * Theme changes: a slow, gentle cross-fade between the old and new palette.
+ * Modern browsers use the View Transitions API, which fades one GPU snapshot of the
+ * page instead of animating every element, so it stays smooth on low-end devices.
+ * The 700ms duration must match TRANSITION_MS in ThemeContext.tsx.
+ */
+html.theme-view-transition::view-transition-old(root),
+html.theme-view-transition::view-transition-new(root) {
+  animation-duration: 700ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Fallback for browsers without view transitions: fade colours on the main surfaces. */
 html.theme-transitioning body,
 html.theme-transitioning .theme-canvas,
 html.theme-transitioning .theme-canvas *,
 html.theme-transitioning .theme-canvas *::before,
 html.theme-transitioning .theme-canvas *::after {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, box-shadow !important;
-  transition-duration: 240ms !important;
-  transition-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1) !important;
+  transition-duration: 600ms !important;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html.theme-view-transition::view-transition-old(root),
+  html.theme-view-transition::view-transition-new(root) { animation: none !important; }
   html.theme-transitioning body,
   html.theme-transitioning .theme-canvas,
   html.theme-transitioning .theme-canvas *,

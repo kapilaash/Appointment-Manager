@@ -20,6 +20,13 @@ async function expectTheme(page: import('@playwright/test').Page, theme: string,
   await expect.poll(() => page.locator('main section.bg-surface').first().evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(surfaceColor);
 }
 
+/** Themes are saved to the account, so start each run from the default regardless of earlier runs. */
+async function resetTheme(page: import('@playwright/test').Page) {
+  await page.getByRole('link', { name: 'Settings' }).click();
+  await page.getByRole('radio', { name: /Studio/ }).check();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+}
+
 async function mailCount(page: import('@playwright/test').Page) {
   const response = await page.request.get(mailpitMessagesUrl);
   if (!response.ok()) return 0;
@@ -55,6 +62,7 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   const admin = await browser.newContext();
   const adminPage = await admin.newPage();
   await signIn(adminPage, adminEmail, adminPassword);
+  await resetTheme(adminPage);
   await expectTheme(adminPage, 'light', 'rgb(248, 250, 252)', 'rgb(255, 255, 255)');
   const initialMailCount = await mailCount(adminPage);
 
@@ -93,7 +101,7 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
 
   await instructor.getByRole('link', { name: 'Settings' }).click();
   await expectTheme(instructor, 'light', 'rgb(248, 250, 252)', 'rgb(255, 255, 255)');
-  await instructor.getByRole('button', { name: 'Black & White' }).click();
+  await instructor.getByRole('radio', { name: /Black & White/ }).check();
   await expectTheme(instructor, 'dark', 'rgb(9, 9, 11)', 'rgb(24, 24, 27)');
   await instructor.reload();
   await expectTheme(instructor, 'dark', 'rgb(9, 9, 11)', 'rgb(24, 24, 27)');
@@ -114,7 +122,7 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await expect(instructor.getByText(/Weekly hours sent for approval/)).toBeVisible();
   await expect(instructor.getByText(/is waiting for admin approval/)).toBeVisible();
   await instructor.getByRole('link', { name: 'Settings' }).click();
-  await instructor.getByRole('button', { name: 'Classic Chess' }).click();
+  await instructor.getByRole('radio', { name: /Classic Chess/ }).check();
   await expectTheme(instructor, 'classic', 'rgb(247, 243, 232)', 'rgb(255, 253, 246)');
   await instructor.getByRole('link', { name: 'Availability' }).click();
   await expectTheme(instructor, 'classic', 'rgb(247, 243, 232)', 'rgb(255, 253, 246)');
@@ -131,9 +139,9 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await expect(weeklyRequest).toHaveCount(0);
   await adminPage.getByRole('link', { name: 'Settings' }).click();
   await expectTheme(adminPage, 'light', 'rgb(248, 250, 252)', 'rgb(255, 255, 255)');
-  await adminPage.getByRole('button', { name: 'Black & White' }).click();
+  await adminPage.getByRole('radio', { name: /Black & White/ }).check();
   await expectTheme(adminPage, 'dark', 'rgb(9, 9, 11)', 'rgb(24, 24, 27)');
-  await adminPage.getByRole('button', { name: 'Classic Chess' }).click();
+  await adminPage.getByRole('radio', { name: /Classic Chess/ }).check();
   await expectTheme(adminPage, 'classic', 'rgb(247, 243, 232)', 'rgb(255, 253, 246)');
   await adminPage.getByRole('link', { name: 'Book a demo' }).click();
   await expectTheme(adminPage, 'classic', 'rgb(247, 243, 232)', 'rgb(255, 253, 246)');
@@ -243,5 +251,6 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await adminPage.getByRole('link', { name: 'Book a demo' }).click();
   await expectTheme(adminPage, 'classic', 'rgb(247, 243, 232)', 'rgb(255, 253, 246)');
   await expect(adminPage.getByLabel('Available coaches').locator('option', { hasText: instructorName })).toHaveCount(0);
+  await resetTheme(adminPage); // leave the shared admin account on its default theme
   await admin.close();
 });
