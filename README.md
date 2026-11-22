@@ -65,11 +65,16 @@ Stop services with **Ctrl+C**. `docker compose down` preserves the local databas
 
 Run PostgreSQL, Redis, Meilisearch, and Mailpit separately. Set `MEILISEARCH_URL` and `MEILISEARCH_API_KEY` for the backend and worker. From the repository root:
 
+Backend dependencies are pinned in `backend/uv.lock` (exact versions with checksums). Install [uv](https://docs.astral.sh/uv/) once (`py -3.12 -m pip install uv`), then:
+
 ```powershell
-py -3.12 -m venv backend/.venv
-backend/.venv/Scripts/Activate.ps1
-python -m pip install -e "backend[dev]"
+cd backend
+uv sync --frozen --extra dev      # creates backend/.venv exactly as locked
+.venv/Scripts/Activate.ps1
+cd ..
 ```
+
+To add or upgrade a dependency, edit `pyproject.toml` and run `uv lock`; Dependabot proposes weekly lock updates as pull requests that CI tests first.
 
 Set `DATABASE_URL`, `REDIS_URL`, `SMTP_HOST=localhost`, and `SMTP_PORT=1025` in your shell, then run these in separate terminals:
 

@@ -1,13 +1,16 @@
 """Optional Sentry error reporting with request payloads and identity data removed."""
 
 from contextlib import nullcontext
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit, urlunsplit
 
 from app.core.config import settings
 
+if TYPE_CHECKING:  # Sentry is imported lazily at runtime, only when a DSN is configured.
+    from sentry_sdk.types import Event
 
-def _scrub_event(event: dict[str, Any], _hint: dict[str, Any]) -> dict[str, Any]:
+
+def _scrub_event(event: "Event", _hint: dict[str, Any]) -> "Event":
     event.pop("user", None)
     request = event.get("request")
     if isinstance(request, dict):
