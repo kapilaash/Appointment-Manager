@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { Button } from './Button';
 
 type DialogProps = {
@@ -29,6 +29,9 @@ export function Dialog({
   children,
 }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  // Unique per dialog so two dialogs on one page never share label ids.
+  const titleId = useId();
+  const descriptionId = useId();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -40,8 +43,8 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      aria-labelledby="dialog-title"
-      aria-describedby={description ? 'dialog-description' : undefined}
+      aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
       onCancel={(event) => {
         event.preventDefault();
         if (!busy) onClose();
@@ -49,11 +52,11 @@ export function Dialog({
       onClick={(event) => {
         if (event.target === event.currentTarget && !busy) onClose();
       }}
-      className="m-auto w-[min(92vw,34rem)] rounded-2xl border-0 bg-transparent p-0 shadow-2xl backdrop:bg-slate-950/40"
+      className="m-auto w-[min(92vw,34rem)] rounded-2xl border-0 bg-transparent p-0 shadow-2xl backdrop:bg-slate-950/40 backdrop:backdrop-blur-[2px]"
     >
-      <section className="ui-enter rounded-2xl border border-slate-200 bg-surface p-4 sm:p-6">
-        <h2 id="dialog-title" className="text-lg font-semibold text-heading">{title}</h2>
-        {description && <p id="dialog-description" className="mt-2 text-sm leading-6 text-slate-600">{description}</p>}
+      <section className="dialog-enter rounded-2xl border border-slate-200 bg-surface p-4 sm:p-6">
+        <h2 id={titleId} className="text-lg font-semibold text-heading">{title}</h2>
+        {description && <p id={descriptionId} className="mt-2 text-sm leading-6 text-slate-600">{description}</p>}
         {children && <div className="mt-4">{children}</div>}
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={onClose} disabled={busy}>{cancelLabel}</Button>

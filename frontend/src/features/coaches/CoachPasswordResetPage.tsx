@@ -30,7 +30,7 @@ export function CoachPasswordResetPage() {
           </label>
           {result.isError && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">This reset link is invalid, expired, or already used. Ask an admin for a new one.</p>}
           {password !== confirmPassword && confirmPassword && <p role="alert" className="mt-3 text-sm text-red-700">Passwords do not match.</p>}
-          <button disabled={!token || password.length < 12 || password !== confirmPassword || result.isLoading} className="mt-6 w-full rounded-lg bg-action px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{result.isLoading ? 'Updating…' : 'Set new password'}</button>
+          <button disabled={!token || password.length < 12 || password !== confirmPassword || result.isLoading} className="mt-6 w-full rounded-lg bg-action px-4 py-3 text-sm font-semibold text-on-action disabled:opacity-50">{result.isLoading ? 'Updating…' : 'Set new password'}</button>
         </>}
       </form>
     </main>

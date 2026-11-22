@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { TimeZoneSelect } from '../../components/ui/TimeZoneSelect';
+import { useToast } from '../../components/ui/Toast';
 import { apiErrorDetail } from '../../lib/apiError';
 import { useMeQuery } from '../auth/api';
 import {
@@ -68,7 +69,7 @@ export function AvailabilityPage() {
   const [availabilityError, setAvailabilityError] = useState('');
   const [exceptionError, setExceptionError] = useState('');
   const [timezoneError, setTimezoneError] = useState('');
-  const [notice, setNotice] = useState('');
+  const { notify } = useToast();
 
   const pending = availability.currentData?.pending_requests ?? [];
   const pendingWeekly = pending.find((item) => item.request_type === 'weekly_availability');
@@ -98,12 +99,11 @@ export function AvailabilityPage() {
   async function saveRules() {
     if (!instructor) return;
     setAvailabilityError('');
-    setNotice('');
     try {
       const result = await save({ id: instructor.id, rules, ...(needsApproval && note.trim() ? { note: note.trim() } : {}) }).unwrap();
       if (isPendingReceipt(result)) {
         setNote('');
-        setNotice('Weekly hours sent for approval. Families can book your current hours until an administrator approves the change.');
+        notify('Weekly hours sent for approval. Families can book your current hours until an administrator approves the change.');
       }
     } catch (error) {
       setAvailabilityError(apiErrorDetail(error) ?? 'Weekly availability could not be saved. Check each time range and try again.');
@@ -113,10 +113,9 @@ export function AvailabilityPage() {
   async function saveTimezone() {
     if (!instructor || (timezoneDraft === instructor.timezone && countryCodeDraft === instructor.country_code)) return;
     setTimezoneError('');
-    setNotice('');
     try {
       const result = await updateInstructor({ id: instructor.id, timezone: timezoneDraft, country_code: countryCodeDraft }).unwrap();
-      if (result.pending_request_id) setNotice('Time zone change sent for approval. Your hours keep the current time zone until it is approved.');
+      if (result.pending_request_id) notify('Time zone change sent for approval. Your hours keep the current time zone until it is approved.');
     } catch (error) {
       setTimezoneError(apiErrorDetail(error) ?? 'Time zone could not be saved. Choose a valid country and region, then retry.');
     }
@@ -126,12 +125,11 @@ export function AvailabilityPage() {
     event.preventDefault();
     if (!instructor || !exceptionDate) return;
     setExceptionError('');
-    setNotice('');
     try {
       const result = await addException({ id: instructor.id, exception_date: exceptionDate, exception_type: exceptionType,
         start_local_time: exceptionStart || null, end_local_time: exceptionEnd || null, reason }).unwrap();
       setExceptionDate(''); setExceptionStart(''); setExceptionEnd(''); setReason('');
-      if (isPendingReceipt(result)) setNotice('Request sent. It appears below as awaiting approval.');
+      if (isPendingReceipt(result)) notify('Request sent. It appears below as awaiting approval.');
     } catch (error) {
       setExceptionError(apiErrorDetail(error) ?? 'The exception could not be saved. Check the selected date and time range.');
     }
@@ -140,20 +138,18 @@ export function AvailabilityPage() {
   async function removeException(exceptionId: string) {
     if (!instructor) return;
     setExceptionError('');
-    setNotice('');
     try {
       const result = await deleteException({ instructorId: instructor.id, exceptionId }).unwrap();
-      if (isPendingReceipt(result)) setNotice('Removal request sent for approval.');
+      if (isPendingReceipt(result)) notify('Removal request sent for approval.');
     } catch (error) {
       setExceptionError(apiErrorDetail(error) ?? 'The availability exception could not be removed. Refresh and try again.');
     }
   }
 
   async function withdrawRequest(request: PendingAvailabilityRequest) {
-    setNotice('');
     try {
       await withdraw(request.id).unwrap();
-      setNotice('Request withdrawn.');
+      notify('Request withdrawn.');
     } catch (error) {
       setAvailabilityError(apiErrorDetail(error) ?? 'The request could not be withdrawn. Refresh and try again.');
     }
@@ -193,7 +189,6 @@ export function AvailabilityPage() {
           <Button variant="secondary" onClick={() => void availability.refetch()}>Retry</Button>
         </div>
       )}
-      {notice && <p role="status" className="ui-enter rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
       {!needsApproval && pending.length > 0 && (
         <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
           This coach has {pending.length} availability {pending.length === 1 ? 'request' : 'requests'} waiting for review. <Link className="font-semibold underline" to="/requests">Open approvals</Link>

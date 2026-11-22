@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Thirumal Chess Academy">
+  <rect width="512" height="512" rx="112" fill="#4f46e5"/>
+  <path fill="#fff" d="M136 352h240l20-160-76 56-64-104-64 104-76-56 20 160Zm4 32h232v40H140v-40Z"/>
+  <circle cx="256" cy="132" r="18" fill="#fff"/>
+  <circle cx="116" cy="180" r="16" fill="#fff"/>
+  <circle cx="396" cy="180" r="16" fill="#fff"/>
+</svg>

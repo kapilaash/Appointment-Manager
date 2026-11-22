@@ -6,7 +6,7 @@ export function PublicBookingPage() {
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12">
       <div className="mx-auto max-w-5xl">
         <header className="mb-8 flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-action text-white"><Crown size={20} /></span>
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-action text-on-action"><Crown size={20} /></span>
           <div>
             <p className="text-xs font-medium uppercase tracking-[.14em] text-slate-500">Thirumal Chess Academy</p>
             <h1 className="text-lg font-semibold text-heading">Book a demo class</h1>

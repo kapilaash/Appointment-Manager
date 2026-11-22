@@ -47,6 +47,7 @@ export default defineConfig(({ mode }) => {
         '@reduxjs/toolkit',
         '@reduxjs/toolkit/query',
         '@reduxjs/toolkit/query/react',
+        '@sentry/react',
         '@hookform/resolvers/zod',
         '@vvo/tzdb',
         '@fullcalendar/daygrid',

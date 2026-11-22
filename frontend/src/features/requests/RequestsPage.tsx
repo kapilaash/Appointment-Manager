@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Dialog } from '../../components/ui/Dialog';
+import { useToast } from '../../components/ui/Toast';
 import { apiErrorDetail } from '../../lib/apiError';
 import { useMeQuery } from '../auth/api';
 import {
@@ -131,7 +132,8 @@ export function RequestsPage() {
   const [rejectTarget, setRejectTarget] = useState<ChangeRequest | null>(null);
   const [rejectNote, setRejectNote] = useState('');
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState<{ text: string; affected?: string[] } | null>(null);
+  const { notify } = useToast();
+  const [affected, setAffected] = useState<string[]>([]);
   const busy = approveResult.isLoading || rejectResult.isLoading || withdrawResult.isLoading;
   const items = requests.currentData?.items ?? [];
 
@@ -142,10 +144,11 @@ export function RequestsPage() {
 
   async function approveRequest(request: ChangeRequest) {
     setError('');
-    setNotice(null);
+    setAffected([]);
     try {
       const result = await approve({ id: request.id }).unwrap();
-      setNotice({ text: `Approved: ${request.label.toLowerCase()} for ${request.instructor_name}. The coach has been emailed.`, affected: result.affected_bookings });
+      notify(`Approved: ${request.label.toLowerCase()} for ${request.instructor_name}. The coach has been emailed.`);
+      setAffected(result.affected_bookings);
     } catch (failure) {
       setError(apiErrorDetail(failure) ?? 'The request could not be approved. Refresh and try again.');
     }
@@ -156,7 +159,7 @@ export function RequestsPage() {
     setError('');
     try {
       await reject({ id: rejectTarget.id, review_note: rejectNote.trim() }).unwrap();
-      setNotice({ text: `Not approved. ${rejectTarget.instructor_name} has been emailed your note.` });
+      notify(`Not approved. ${rejectTarget.instructor_name} has been emailed your note.`);
       setRejectTarget(null);
       setRejectNote('');
     } catch (failure) {
@@ -168,7 +171,7 @@ export function RequestsPage() {
     setError('');
     try {
       await withdraw(request.id).unwrap();
-      setNotice({ text: 'Request withdrawn.' });
+      notify('Request withdrawn.');
     } catch (failure) {
       setError(apiErrorDetail(failure) ?? 'The request could not be withdrawn. Refresh and try again.');
     }
@@ -193,22 +196,17 @@ export function RequestsPage() {
             role="tab"
             aria-selected={tab === item.id}
             onClick={() => chooseTab(item.id)}
-            className={`min-h-10 rounded-full px-4 text-sm font-semibold transition ${tab === item.id ? 'bg-action text-white shadow-sm' : 'bg-surface text-slate-600 ring-1 ring-inset ring-slate-200 hover:bg-slate-50'}`}
+            className={`min-h-10 rounded-full px-4 text-sm font-semibold transition ${tab === item.id ? 'bg-action text-on-action shadow-sm' : 'bg-surface text-slate-600 ring-1 ring-inset ring-slate-200 hover:bg-slate-50'}`}
           >
             {item.label}
           </button>
         ))}
       </div>
 
-      {notice && (
-        <div role="status" className="ui-enter rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
-          {notice.text}
-          {notice.affected?.length ? (
-            <p className="mt-2 text-amber-900">
-              Existing bookings were kept but now fall outside the approved hours — review them:
-              {notice.affected.map((id) => <Link key={id} className="ml-2 underline" to={`/calendar?appointment=${id}`}>{id.slice(0, 8)}</Link>)}
-            </p>
-          ) : null}
+      {affected.length > 0 && (
+        <div role="status" className="ui-enter rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Existing bookings were kept but now fall outside the approved hours. Review them:
+          {affected.map((id) => <Link key={id} className="ml-2 underline" to={`/calendar?appointment=${id}`}>{id.slice(0, 8)}</Link>)}
         </div>
       )}
       {error && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Dialog } from '../../components/ui/Dialog';
+import { useToast } from '../../components/ui/Toast';
 import { useMeQuery } from '../auth/api';
 import { isPendingReceipt } from '../requests/api';
 import { apiErrorDetail } from '../../lib/apiError';
@@ -34,8 +35,8 @@ export function AppointmentsPage() {
   const [cancelError, setCancelError] = useState('');
   const [completeTarget, setCompleteTarget] = useState<Appointment | null>(null);
   const [completeError, setCompleteError] = useState('');
-  const [notice, setNotice] = useState('');
-  const appointments = useAppointmentsQuery(status ? { status } : undefined, { pollingInterval: 5000, skip: Boolean(search.trim()) });
+  const { notify } = useToast();
+  const appointments = useAppointmentsQuery(status ? { status } : undefined, { pollingInterval: 30_000, skipPollingIfUnfocused: true, refetchOnFocus: true, skip: Boolean(search.trim()) });
   const normalizedSearch = search.trim();
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(normalizedSearch), 300);
@@ -47,7 +48,8 @@ export function AppointmentsPage() {
   );
   const notifications = useAppointmentNotificationsQuery(selectedNotifications, {
     skip: !selectedNotifications,
-    pollingInterval: selectedNotifications ? 5000 : 0,
+    pollingInterval: selectedNotifications ? 10_000 : 0,
+    skipPollingIfUnfocused: true,
   });
   const [cancel, cancelResult] = useCancelAppointmentMutation();
   const [complete, completeResult] = useCompleteAppointmentMutation();
@@ -65,7 +67,7 @@ export function AppointmentsPage() {
     setCancelError('');
     try {
       const result = await cancel({ id: cancelTarget.id, reason: cancelReason.trim() }).unwrap();
-      if (isPendingReceipt(result)) setNotice('Cancellation request sent. The demo stays booked until an administrator approves it.');
+      if (isPendingReceipt(result)) notify('Cancellation request sent. The demo stays booked until an administrator approves it.');
       setCancelTarget(null);
       setCancelReason('');
     } catch (error) {
@@ -78,7 +80,7 @@ export function AppointmentsPage() {
     setCompleteError('');
     try {
       await complete(completeTarget.id).unwrap();
-      setNotice('Demo marked as completed.');
+      notify('Demo marked as completed.');
       setCompleteTarget(null);
     } catch {
       setCompleteError('This demo could not be marked complete. It may still be in progress or may have been cancelled.');
@@ -93,7 +95,6 @@ export function AppointmentsPage() {
 
   return <div className="space-y-6">
     <div><h2 className="text-2xl font-semibold tracking-tight text-heading">Appointments</h2><p className="mt-1 text-sm text-slate-500">Review classes, meeting links, and email delivery. Mark a confirmed demo complete after its scheduled end.</p></div>
-    {notice && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
     <Card className="overflow-hidden">
       <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
         <label className="flex items-center gap-2 rounded-lg border border-slate-300 px-3"><Search size={16} className="text-slate-400" /><input aria-label="Search appointments" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search names, email, coach, or booking ID" className="w-full py-2 text-sm outline-none sm:w-64" />{search && <button type="button" aria-label="Clear search" onClick={() => setSearch('')} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={14} /></button>}</label>

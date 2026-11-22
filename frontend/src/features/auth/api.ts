@@ -4,6 +4,7 @@ import type { ThemePreference } from '../appearance/ThemeContext';
 export type User = {
   id: string;
   email: string;
+  full_name?: string;
   role: 'admin' | 'instructor';
   instructor_profile?: { timezone: string; country_code: string | null } | null;
   /** Appearance saved on the account; null until the user picks one. */

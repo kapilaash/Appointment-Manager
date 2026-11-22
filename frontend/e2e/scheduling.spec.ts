@@ -96,7 +96,7 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await expect.poll(() => mailCount(adminPage), { timeout: 30_000 }).toBeGreaterThanOrEqual(initialMailCount + 2);
 
   await adminPage.getByRole('button', { name: 'Account menu' }).click();
-  await adminPage.getByRole('button', { name: /Sign out/ }).click();
+  await adminPage.getByRole('menuitem', { name: /Sign out/ }).click();
   await signIn(instructor, instructorEmail, instructorPassword);
 
   await instructor.getByRole('link', { name: 'Settings' }).click();
@@ -127,7 +127,7 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await instructor.getByRole('link', { name: 'Availability' }).click();
   await expectTheme(instructor, 'classic', 'rgb(247, 243, 232)', 'rgb(255, 253, 246)');
   await instructor.getByRole('button', { name: 'Account menu' }).click();
-  await instructor.getByRole('button', { name: /Sign out/ }).click();
+  await instructor.getByRole('menuitem', { name: /Sign out/ }).click();
   await instructor.close();
 
   await signIn(adminPage, adminEmail, adminPassword);

@@ -25,7 +25,7 @@ export function CoachForgotPasswordPage() {
               <input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" />
             </label>
             {result.isError && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">The reset request could not be sent. Please wait a moment and try again.</p>}
-            <button disabled={result.isLoading} className="mt-6 w-full rounded-lg bg-action px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{result.isLoading ? 'Sending…' : 'Send reset link'}</button>
+            <button disabled={result.isLoading} className="mt-6 w-full rounded-lg bg-action px-4 py-3 text-sm font-semibold text-on-action disabled:opacity-50">{result.isLoading ? 'Sending…' : 'Send reset link'}</button>
           </>
         )}
         <a className="mt-5 inline-block text-sm font-medium text-indigo-700 underline" href="/">Return to sign in</a>

@@ -122,7 +122,7 @@ export function CoachAdminPage() {
         <form onSubmit={createInvite} className="mt-4 flex flex-col gap-3 sm:flex-row">
           <label className="sr-only" htmlFor="coach-email">Coach email</label>
           <input id="coach-email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="coach@example.com" className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm" />
-          <button disabled={inviteResult.isLoading} className="rounded-lg bg-action px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+          <button disabled={inviteResult.isLoading} className="rounded-lg bg-action px-4 py-2.5 text-sm font-semibold text-on-action disabled:opacity-50">
             {inviteResult.isLoading ? 'Creating…' : 'Create invite'}
           </button>
         </form>

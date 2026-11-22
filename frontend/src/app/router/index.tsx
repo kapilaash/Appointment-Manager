@@ -1,10 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
 import { lazy, Suspense, type ReactNode } from 'react';
 import { useEffect } from 'react';
-import * as Sentry from '@sentry/react';
 import { createBrowserRouter, Navigate, Outlet, useRouteError } from 'react-router-dom';
 import { App } from '../../components/layout/App';
+import { PageSkeleton } from '../../components/ui/Skeleton';
 import { useMeQuery } from '../../features/auth/api';
+import { isChunkLoadError, reloadForNewRelease } from '../../observability/chunkRecovery';
+import { reportError } from '../../observability/errorReporting';
 
 const DashboardPage = lazy(() => import('../../features/dashboard/DashboardPage').then((module) => ({ default: module.DashboardPage })));
 const BookingPage = lazy(() => import('../../features/appointments/BookingPage').then((module) => ({ default: module.BookingPage })));
@@ -25,7 +27,7 @@ const HelpPage = lazy(() => import('../../features/help/HelpPage').then((module)
 
 // This helper belongs beside the router so all lazy pages share the same loading state.
 function RouteBoundary({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<div role="status" className="grid min-h-64 place-items-center text-sm text-slate-500">Loading page…</div>}>{children}</Suspense>;
+  return <Suspense fallback={<div role="status" aria-label="Loading page"><PageSkeleton /></div>}>{children}</Suspense>;
 }
 
 function Home() {
@@ -35,21 +37,24 @@ function Home() {
 
 function AdminOnlyRoutes() {
   const auth = useMeQuery();
-  if (auth.isLoading) return <div className="grid min-h-64 place-items-center text-sm text-slate-500">Loading your workspace…</div>;
+  if (auth.isLoading) return <div role="status" aria-label="Loading page"><PageSkeleton /></div>;
   return auth.data?.role === 'admin' ? <Outlet /> : <Navigate to="/" replace />;
 }
 
 function RouteErrorPage() {
   const error = useRouteError();
+  const newRelease = isChunkLoadError(error);
   useEffect(() => {
-    Sentry.captureException(error);
-  }, [error]);
+    // A missing code chunk means a new release went out; reload once to pick it up.
+    if (newRelease && reloadForNewRelease()) return;
+    reportError(error);
+  }, [error, newRelease]);
 
   return (
     <main role="alert" className="grid min-h-screen place-items-center p-6 text-center">
       <div>
-        <h1 className="text-xl font-semibold">This page could not load</h1>
-        <p className="mt-2 text-sm text-slate-500">Try reloading. The error has been recorded for support.</p>
+        <h1 className="text-xl font-semibold">{newRelease ? 'A new version is available' : 'This page could not load'}</h1>
+        <p className="mt-2 text-sm text-slate-500">{newRelease ? 'Reload to continue with the latest version.' : 'Try reloading. The error has been recorded for support.'}</p>
         <button className="mt-4 rounded-lg border px-4 py-2" onClick={() => window.location.reload()}>
           Reload page
         </button>
