@@ -23,8 +23,16 @@ export class ErrorBoundary extends Component<Props, State> {
       <main role="alert" className="grid min-h-screen place-items-center bg-slate-50 p-6 text-center">
         <div className="max-w-sm">
           <h1 className="text-xl font-semibold text-heading">Something went wrong</h1>
-          <p className="mt-2 text-sm text-slate-600">The page hit an unexpected error. It has been recorded. Reloading usually fixes it.</p>
-          <button type="button" className="mt-5 min-h-11 rounded-lg bg-action px-5 text-sm font-semibold text-on-action" onClick={() => window.location.reload()}>Reload page</button>
+          <p className="mt-2 text-sm text-slate-600">
+            The page hit an unexpected error. It has been recorded. Reloading usually fixes it.
+          </p>
+          <button
+            type="button"
+            className="mt-5 min-h-11 rounded-lg bg-action px-5 text-sm font-semibold text-on-action"
+            onClick={() => window.location.reload()}
+          >
+            Reload page
+          </button>
         </div>
       </main>
     );

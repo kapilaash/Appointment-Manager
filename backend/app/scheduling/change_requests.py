@@ -63,13 +63,19 @@ def describe_request(request_type: str, payload: dict[str, Any], coach_timezone:
             by_day.setdefault(int(rule["day_of_week"]), []).append(
                 f"{_hhmm(rule['start_local_time'])}–{_hhmm(rule['end_local_time'])}"
             )
-        days = "; ".join(f"{_WEEKDAYS[day]} {', '.join(spans)}" for day, spans in sorted(by_day.items()))
+        days = "; ".join(
+            f"{_WEEKDAYS[day]} {', '.join(spans)}" for day, spans in sorted(by_day.items())
+        )
         return f"New weekly hours ({coach_timezone}): {days}."
     if request_type == EXCEPTION_ADD:
         return f"Add {_exception_phrase(payload)}."
     if request_type == EXCEPTION_REMOVE:
         before = payload.get("before") or {}
-        return f"Remove {_exception_phrase(before)}." if before else "Remove a time-off or extra-hours entry."
+        return (
+            f"Remove {_exception_phrase(before)}."
+            if before
+            else "Remove a time-off or extra-hours entry."
+        )
     if request_type == TIMEZONE_CHANGE:
         before = payload.get("before") or {}
         return (

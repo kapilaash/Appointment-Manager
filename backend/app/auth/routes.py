@@ -98,13 +98,23 @@ def start_session_cookies(response: Response, session_id: str, csrf_token: str) 
     secure = settings.ENVIRONMENT == "production"
     # HttpOnly session cookie: never readable by page scripts.
     response.set_cookie(
-        key=settings.SESSION_COOKIE_NAME, value=session_id, max_age=settings.SESSION_MAX_AGE_SECONDS,
-        httponly=True, secure=secure, samesite="lax", path="/",
+        key=settings.SESSION_COOKIE_NAME,
+        value=session_id,
+        max_age=settings.SESSION_MAX_AGE_SECONDS,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        path="/",
     )
     # Readable CSRF cookie, echoed back by the client in the X-CSRF-Token header.
     response.set_cookie(
-        key="csrf_token", value=csrf_token, max_age=settings.SESSION_MAX_AGE_SECONDS,
-        httponly=False, secure=secure, samesite="lax", path="/",
+        key="csrf_token",
+        value=csrf_token,
+        max_age=settings.SESSION_MAX_AGE_SECONDS,
+        httponly=False,
+        secure=secure,
+        samesite="lax",
+        path="/",
     )
 
 
@@ -121,7 +131,7 @@ async def login(
     payload: LoginRequest,
     request: Request,
     response: Response,
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),
 ) -> UserResponse | MfaChallengeOut:
     client_ip = request.client.host if request.client else "unknown"
     email = payload.email.strip().lower()
@@ -137,11 +147,7 @@ async def login(
             detail="Too many sign-in attempts. Wait a little and try again.",
             headers={"Retry-After": str(failure_state.ip_retry_after)},
         )
-    stmt = (
-        select(User)
-        .options(selectinload(User.instructor_profile))
-        .where(User.email == email)
-    )
+    stmt = select(User).options(selectinload(User.instructor_profile)).where(User.email == email)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
@@ -154,8 +160,7 @@ async def login(
         await _record_failed_attempt(redis, client_ip, email, failure_state)
         logger.info("login_failed", reason="invalid_credentials")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password"
         )
 
     try:
@@ -165,8 +170,7 @@ async def login(
 
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Your account has been deactivated"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Your account has been deactivated"
         )
 
     if user.mfa_enabled:
@@ -174,23 +178,34 @@ async def login(
         challenge = secrets.token_urlsafe(32)
         try:
             await redis.setex(
-                f"{MFA_CHALLENGE_PREFIX}{challenge}", MFA_CHALLENGE_TTL_SECONDS,
+                f"{MFA_CHALLENGE_PREFIX}{challenge}",
+                MFA_CHALLENGE_TTL_SECONDS,
                 json.dumps({"user_id": str(user.id), "attempts": 0}),
             )
         except RedisError as exc:
-            raise HTTPException(503, "Sign-in is temporarily unavailable. Try again shortly.") from exc
+            raise HTTPException(
+                503, "Sign-in is temporarily unavailable. Try again shortly."
+            ) from exc
         return MfaChallengeOut(mfa_token=challenge)
 
     return UserResponse.model_validate(await _sign_in(response, user))
 
 
-async def _record_failed_attempt(redis: Any, client_ip: str, email: str, failure_state: Any) -> None:
+async def _record_failed_attempt(
+    redis: Any, client_ip: str, email: str, failure_state: Any
+) -> None:
     try:
-        failure_state = failure_state if failure_state.email_limited else await record_login_failure(redis, client_ip, email)
+        failure_state = (
+            failure_state
+            if failure_state.email_limited
+            else await record_login_failure(redis, client_ip, email)
+        )
     except RedisError as exc:
         raise HTTPException(503, "Sign-in is temporarily unavailable. Try again shortly.") from exc
     if failure_state.email_limited or failure_state.ip_limited:
-        logger.warning("login_rate_limited", scope="account" if failure_state.email_limited else "source")
+        logger.warning(
+            "login_rate_limited", scope="account" if failure_state.email_limited else "source"
+        )
         retry_after = max(failure_state.email_retry_after, failure_state.ip_retry_after)
         raise HTTPException(
             status_code=429,
@@ -228,14 +243,18 @@ async def login_second_step(
 ):
     redis = get_redis_client()
     key = f"{MFA_CHALLENGE_PREFIX}{payload.mfa_token}"
-    expired = HTTPException(status_code=401, detail="This sign-in attempt expired. Enter your email and password again.")
+    expired = HTTPException(
+        status_code=401, detail="This sign-in attempt expired. Enter your email and password again."
+    )
     try:
         raw = await redis.get(key)
         if not raw:
             raise expired
         challenge = json.loads(raw)
         user = await db.scalar(
-            select(User).options(selectinload(User.instructor_profile)).where(User.id == UUID(challenge["user_id"]))
+            select(User)
+            .options(selectinload(User.instructor_profile))
+            .where(User.id == UUID(challenge["user_id"]))
         )
         if user is None or not user.is_active or not user.mfa_enabled:
             await redis.delete(key)
@@ -245,9 +264,15 @@ async def login_second_step(
             if challenge["attempts"] >= MFA_MAX_ATTEMPTS:
                 await redis.delete(key)
                 logger.warning("mfa_attempts_exhausted", user_id=str(user.id))
-                raise HTTPException(status_code=429, detail="Too many incorrect codes. Sign in again to get a new attempt.")
+                raise HTTPException(
+                    status_code=429,
+                    detail="Too many incorrect codes. Sign in again to get a new attempt.",
+                )
             await redis.set(key, json.dumps(challenge), keepttl=True)
-            raise HTTPException(status_code=400, detail="That code is not right. Check your authenticator app and try again.")
+            raise HTTPException(
+                status_code=400,
+                detail="That code is not right. Check your authenticator app and try again.",
+            )
         await redis.delete(key)
     except RedisError as exc:
         raise HTTPException(503, "Sign-in is temporarily unavailable. Try again shortly.") from exc
@@ -290,15 +315,19 @@ async def validate_coach_invitation(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict[str, object]:
     now = datetime.now(UTC)
-    token = await db.scalar(select(AccountToken).where(
-        AccountToken.token_hash == token_digest(payload.token),
-        AccountToken.purpose == "coach_invitation",
-        AccountToken.consumed_at.is_(None),
-        AccountToken.revoked_at.is_(None),
-        AccountToken.expires_at > now,
-    ))
+    token = await db.scalar(
+        select(AccountToken).where(
+            AccountToken.token_hash == token_digest(payload.token),
+            AccountToken.purpose == "coach_invitation",
+            AccountToken.consumed_at.is_(None),
+            AccountToken.revoked_at.is_(None),
+            AccountToken.expires_at > now,
+        )
+    )
     if token is None:
-        raise HTTPException(status_code=400, detail="Invitation is invalid, expired, or already used")
+        raise HTTPException(
+            status_code=400, detail="Invitation is invalid, expired, or already used"
+        )
     return {"email": token.email, "expires_at": token.expires_at}
 
 
@@ -308,15 +337,21 @@ async def register_coach(
     db: AsyncSession = Depends(get_db_session),
 ) -> User:
     now = datetime.now(UTC)
-    token = await db.scalar(select(AccountToken).where(
-        AccountToken.token_hash == token_digest(payload.token),
-        AccountToken.purpose == "coach_invitation",
-        AccountToken.consumed_at.is_(None),
-        AccountToken.revoked_at.is_(None),
-        AccountToken.expires_at > now,
-    ).with_for_update())
+    token = await db.scalar(
+        select(AccountToken)
+        .where(
+            AccountToken.token_hash == token_digest(payload.token),
+            AccountToken.purpose == "coach_invitation",
+            AccountToken.consumed_at.is_(None),
+            AccountToken.revoked_at.is_(None),
+            AccountToken.expires_at > now,
+        )
+        .with_for_update()
+    )
     if token is None:
-        raise HTTPException(status_code=400, detail="Invitation is invalid, expired, or already used")
+        raise HTTPException(
+            status_code=400, detail="Invitation is invalid, expired, or already used"
+        )
 
     email = token.email.strip().lower()
     if await db.scalar(select(User.id).where(User.email == email)):
@@ -345,7 +380,9 @@ async def register_coach(
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status_code=409, detail="An account already exists for this invitation") from exc
+        raise HTTPException(
+            status_code=409, detail="An account already exists for this invitation"
+        ) from exc
     return user
 
 
@@ -354,21 +391,29 @@ RESET_LINK_MINUTES = 30
 
 
 @router.post("/password-reset", status_code=status.HTTP_204_NO_CONTENT)
-@router.post("/coach-password-reset", status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
+@router.post(
+    "/coach-password-reset", status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False
+)
 async def reset_password(
     payload: PasswordResetIn,
     db: AsyncSession = Depends(get_db_session),
 ) -> None:
     """Set a new password with a one-time emailed link. Works for every role."""
     now = datetime.now(UTC)
-    token = await db.scalar(select(AccountToken).where(
-        AccountToken.token_hash == token_digest(payload.token),
-        AccountToken.purpose.in_(RESET_PURPOSES),
-        AccountToken.consumed_at.is_(None),
-        AccountToken.revoked_at.is_(None),
-        AccountToken.expires_at > now,
-    ).with_for_update())
-    invalid = HTTPException(status_code=400, detail="Reset link is invalid, expired, or already used")
+    token = await db.scalar(
+        select(AccountToken)
+        .where(
+            AccountToken.token_hash == token_digest(payload.token),
+            AccountToken.purpose.in_(RESET_PURPOSES),
+            AccountToken.consumed_at.is_(None),
+            AccountToken.revoked_at.is_(None),
+            AccountToken.expires_at > now,
+        )
+        .with_for_update()
+    )
+    invalid = HTTPException(
+        status_code=400, detail="Reset link is invalid, expired, or already used"
+    )
     if token is None or token.user_id is None:
         raise invalid
 
@@ -391,7 +436,9 @@ async def reset_password(
 
 
 @router.post("/password-reset-request", response_model=MessageResponse)
-@router.post("/coach-password-reset-request", response_model=MessageResponse, include_in_schema=False)
+@router.post(
+    "/coach-password-reset-request", response_model=MessageResponse, include_in_schema=False
+)
 async def request_password_reset(
     payload: PasswordResetRequestIn,
     request: Request,
@@ -406,7 +453,9 @@ async def request_password_reset(
             email,
         )
     except RedisError as exc:
-        raise HTTPException(503, "Password reset is temporarily unavailable. Try again shortly.") from exc
+        raise HTTPException(
+            503, "Password reset is temporarily unavailable. Try again shortly."
+        ) from exc
     if not allowed:
         return MessageResponse(message=message)
 
@@ -426,13 +475,15 @@ async def request_password_reset(
         .values(revoked_at=now)
     )
     token, token_hash = issue_token()
-    db.add(AccountToken(
-        purpose="password_reset",
-        token_hash=token_hash,
-        email=email,
-        user_id=user.id,
-        expires_at=now + timedelta(minutes=RESET_LINK_MINUTES),
-    ))
+    db.add(
+        AccountToken(
+            purpose="password_reset",
+            token_hash=token_hash,
+            email=email,
+            user_id=user.id,
+            expires_at=now + timedelta(minutes=RESET_LINK_MINUTES),
+        )
+    )
     await db.commit()
 
     # The token sits in the URL fragment, so it never reaches server logs or referrers.
@@ -450,7 +501,9 @@ async def request_password_reset(
         await send_message(email_message)
     except (OSError, smtplib.SMTPException) as exc:
         await db.execute(
-            update(AccountToken).where(AccountToken.token_hash == token_hash).values(revoked_at=datetime.now(UTC))
+            update(AccountToken)
+            .where(AccountToken.token_hash == token_hash)
+            .values(revoked_at=datetime.now(UTC))
         )
         await db.commit()
         logger.warning("password_reset_email_failed", error_type=type(exc).__name__)

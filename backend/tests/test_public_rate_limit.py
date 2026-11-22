@@ -15,11 +15,16 @@ class FakeRedis:
 
 
 @pytest.mark.parametrize("spoofed", ["203.0.113.7", "198.51.100.9"])
-async def test_public_rate_limit_ignores_client_supplied_ip_headers(monkeypatch, spoofed: str) -> None:
+async def test_public_rate_limit_ignores_client_supplied_ip_headers(
+    monkeypatch, spoofed: str
+) -> None:
     redis = FakeRedis()
     monkeypatch.setattr(routes, "get_redis_client", lambda: redis)
     honest = SimpleNamespace(headers={}, client=SimpleNamespace(host="192.0.2.10"))
-    spoofing = SimpleNamespace(headers={"x-client-ip": spoofed, "x-forwarded-for": spoofed}, client=SimpleNamespace(host="192.0.2.10"))
+    spoofing = SimpleNamespace(
+        headers={"x-client-ip": spoofed, "x-forwarded-for": spoofed},
+        client=SimpleNamespace(host="192.0.2.10"),
+    )
 
     await routes._enforce_public_rate_limit(honest, scope="create", limit=5, window_seconds=60)
     await routes._enforce_public_rate_limit(spoofing, scope="create", limit=5, window_seconds=60)

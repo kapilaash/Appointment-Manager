@@ -17,7 +17,9 @@ export async function initErrorReporting(): Promise<void> {
   if (!dsn || sentry) return;
   const module = await import('@sentry/react');
   const configuredSampleRate = Number(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE ?? '0.05');
-  const tracesSampleRate = Number.isFinite(configuredSampleRate) ? Math.min(1, Math.max(0, configuredSampleRate)) : 0.05;
+  const tracesSampleRate = Number.isFinite(configuredSampleRate)
+    ? Math.min(1, Math.max(0, configuredSampleRate))
+    : 0.05;
 
   module.init({
     dsn,
@@ -26,9 +28,17 @@ export async function initErrorReporting(): Promise<void> {
     sendDefaultPii: false,
     tracesSampleRate,
     tracePropagationTargets: [/^\/api(?:\/|$)/],
-    ignoreErrors: [/A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received/],
+    ignoreErrors: [
+      /A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received/,
+    ],
     integrations: [
-      module.reactRouterV7BrowserTracingIntegration({ useEffect, useLocation, useNavigationType, createRoutesFromChildren, matchRoutes }),
+      module.reactRouterV7BrowserTracingIntegration({
+        useEffect,
+        useLocation,
+        useNavigationType,
+        createRoutesFromChildren,
+        matchRoutes,
+      }),
     ],
     beforeSend(event) {
       delete event.user;

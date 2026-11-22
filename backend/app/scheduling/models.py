@@ -25,7 +25,9 @@ from app.users.models import Instructor
 
 class AvailabilityRule(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "availability_rules"
-    instructor_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("instructors.id", ondelete="CASCADE"), index=True)
+    instructor_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("instructors.id", ondelete="CASCADE"), index=True
+    )
     day_of_week: Mapped[int] = mapped_column(Integer, nullable=False)
     start_local_time: Mapped[time] = mapped_column(Time, nullable=False)
     end_local_time: Mapped[time] = mapped_column(Time, nullable=False)
@@ -39,7 +41,9 @@ class AvailabilityRule(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
 class AvailabilityException(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "availability_exceptions"
-    instructor_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("instructors.id", ondelete="CASCADE"), index=True)
+    instructor_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("instructors.id", ondelete="CASCADE"), index=True
+    )
     exception_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     start_local_time: Mapped[time | None] = mapped_column(Time)
     end_local_time: Mapped[time | None] = mapped_column(Time)
@@ -74,7 +78,9 @@ class Student(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 class Appointment(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "appointments"
     instructor_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("instructors.id"), nullable=False)
-    student_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("students.id", ondelete="SET NULL"), nullable=True)
+    student_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("students.id", ondelete="SET NULL"), nullable=True
+    )
     # Public client bookings do not have an authenticated workspace user.
     created_by: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id"), nullable=True)
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -115,27 +121,39 @@ class OutboxEvent(Base, UUIDPrimaryKeyMixin):
     event_type: Mapped[str] = mapped_column(String(80), nullable=False)
     aggregate_id: Mapped[UUID] = mapped_column(Uuid, nullable=False, index=True)
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    processing_status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending", index=True)
+    processing_status: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="pending", index=True
+    )
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     processing_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
 
 
 class ChangeRequest(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     """A coach-submitted change that only takes effect after an administrator approves it."""
 
     __tablename__ = "change_requests"
-    instructor_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("instructors.id", ondelete="CASCADE"), nullable=False, index=True)
-    requested_by: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id", ondelete="SET NULL"))
+    instructor_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("instructors.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    requested_by: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
     request_type: Mapped[str] = mapped_column(String(40), nullable=False)
     # The proposed change plus a "before" snapshot taken when the request was submitted.
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    appointment_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("appointments.id", ondelete="SET NULL"))
+    appointment_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("appointments.id", ondelete="SET NULL")
+    )
     exception_id: Mapped[UUID | None] = mapped_column(Uuid)
     coach_note: Mapped[str | None] = mapped_column(String(1000))
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
-    reviewed_by: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id", ondelete="SET NULL"))
+    reviewed_by: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     review_note: Mapped[str | None] = mapped_column(String(1000))
     __table_args__ = (
@@ -179,10 +197,16 @@ class ChangeRequest(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 class NotificationEvent(Base, UUIDPrimaryKeyMixin):
     __tablename__ = "notification_events"
     # Exactly one of appointment_id / change_request_id identifies what the message is about.
-    appointment_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("appointments.id", ondelete="CASCADE"), nullable=True, index=True)
-    change_request_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("change_requests.id", ondelete="CASCADE"), nullable=True, index=True)
+    appointment_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("appointments.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    change_request_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("change_requests.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     # Account security notices (password changed, two-step sign-in on/off) concern a user, not a booking.
-    user_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    user_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     event_type: Mapped[str] = mapped_column(String(60), nullable=False)
     event_key: Mapped[str] = mapped_column(String(36), nullable=False)
     recipient: Mapped[str] = mapped_column(String(320), nullable=False)
@@ -190,8 +214,15 @@ class NotificationEvent(Base, UUIDPrimaryKeyMixin):
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(String(500))
     provider_reference: Mapped[str | None] = mapped_column(String(240))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=text("now()"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+        onupdate=text("now()"),
+    )
     __table_args__ = (
         Index("uq_notification_event_recipient", "event_key", "recipient", unique=True),
         CheckConstraint(
@@ -205,4 +236,3 @@ class AcademySetting(Base):
     __tablename__ = "academy_settings"
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
     value: Mapped[str] = mapped_column(String(500), nullable=False)
-

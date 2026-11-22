@@ -104,7 +104,9 @@ def main() -> None:
             }
             results = {component: future.result() for component, future in checks.items()}
             with metrics_lock:
-                component_health.update({component: int(healthy) for component, healthy in results.items()})
+                component_health.update(
+                    {component: int(healthy) for component, healthy in results.items()}
+                )
 
             all_healthy = all(results.values())
             if EXTERNAL_HEARTBEAT_URL and all_healthy:

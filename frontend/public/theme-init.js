@@ -5,9 +5,12 @@
   var theme = 'light';
   try {
     var preference = window.localStorage.getItem('thirumal-theme') || 'light';
-    theme = preference === 'system'
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : preference;
+    theme =
+      preference === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+        : preference;
     if (!colors[theme]) theme = 'light';
   } catch (error) {
     theme = 'light';

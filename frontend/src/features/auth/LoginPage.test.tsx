@@ -26,7 +26,9 @@ describe('LoginPage', () => {
   });
 
   it('asks for an authenticator code when the account uses two-step sign-in', async () => {
-    login.mockReturnValue({ unwrap: () => Promise.resolve({ mfa_required: true, mfa_token: 'challenge-token-value-123' }) });
+    login.mockReturnValue({
+      unwrap: () => Promise.resolve({ mfa_required: true, mfa_token: 'challenge-token-value-123' }),
+    });
     render(<LoginPage />);
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'admin@example.com' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a long passphrase' } });
@@ -38,14 +40,17 @@ describe('LoginPage', () => {
   });
 
   it('formats Pydantic validation details instead of rendering object strings', () => {
-    expect(formatLoginError({
-      status: 422,
-      data: { detail: [{ loc: ['body', 'email'], msg: 'Invalid email address' }] },
-    })).toBe('email: Invalid email address');
+    expect(
+      formatLoginError({
+        status: 422,
+        data: { detail: [{ loc: ['body', 'email'], msg: 'Invalid email address' }] },
+      }),
+    ).toBe('email: Invalid email address');
   });
 
   it('shows the API message for invalid credentials', () => {
-    expect(formatLoginError({ status: 401, data: { detail: 'Invalid email or password' } }))
-      .toBe('Invalid email or password');
+    expect(formatLoginError({ status: 401, data: { detail: 'Invalid email or password' } })).toBe(
+      'Invalid email or password',
+    );
   });
 });

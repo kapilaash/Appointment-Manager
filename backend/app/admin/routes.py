@@ -127,9 +127,15 @@ async def list_coaches(db: AsyncSession = Db, _actor: User = Admin) -> list[dict
             "full_name": user.full_name,
             "role": "instructor",
             "is_active": user.is_active,
-            "display_name": user.instructor_profile.display_name if user.instructor_profile else user.full_name,
-            "timezone": user.instructor_profile.timezone if user.instructor_profile else "Not configured",
-            "country_code": user.instructor_profile.country_code if user.instructor_profile else None,
+            "display_name": user.instructor_profile.display_name
+            if user.instructor_profile
+            else user.full_name,
+            "timezone": user.instructor_profile.timezone
+            if user.instructor_profile
+            else "Not configured",
+            "country_code": user.instructor_profile.country_code
+            if user.instructor_profile
+            else None,
         }
         for user in users
     ]
@@ -159,13 +165,15 @@ async def invite_coach(
     )
     token, token_hash = issue_token()
     expires_at = now + timedelta(hours=48)
-    db.add(AccountToken(
-        purpose="coach_invitation",
-        token_hash=token_hash,
-        email=email,
-        created_by_user_id=actor.id,
-        expires_at=expires_at,
-    ))
+    db.add(
+        AccountToken(
+            purpose="coach_invitation",
+            token_hash=token_hash,
+            email=email,
+            created_by_user_id=actor.id,
+            expires_at=expires_at,
+        )
+    )
     await db.commit()
     registration_url = _one_time_url("/register/coach", token)
     email_sent = await _email_account_link(email, "coach_invitation", registration_url)
@@ -197,8 +205,15 @@ async def set_coach_active(
         # instead of leaving them in the approval queue forever.
         await db.execute(
             update(ChangeRequest)
-            .where(ChangeRequest.instructor_id == user.instructor_profile.id, ChangeRequest.status == cr.PENDING)
-            .values(status=cr.WITHDRAWN, review_note="Closed automatically: the coach account was deactivated.", updated_at=datetime.now(UTC))
+            .where(
+                ChangeRequest.instructor_id == user.instructor_profile.id,
+                ChangeRequest.status == cr.PENDING,
+            )
+            .values(
+                status=cr.WITHDRAWN,
+                review_note="Closed automatically: the coach account was deactivated.",
+                updated_at=datetime.now(UTC),
+            )
         )
     await db.commit()
     if not data.active:
@@ -213,8 +228,12 @@ async def set_coach_active(
         "full_name": user.full_name,
         "role": "instructor",
         "is_active": user.is_active,
-        "display_name": user.instructor_profile.display_name if user.instructor_profile else user.full_name,
-        "timezone": user.instructor_profile.timezone if user.instructor_profile else "Not configured",
+        "display_name": user.instructor_profile.display_name
+        if user.instructor_profile
+        else user.full_name,
+        "timezone": user.instructor_profile.timezone
+        if user.instructor_profile
+        else "Not configured",
         "country_code": user.instructor_profile.country_code if user.instructor_profile else None,
     }
 
@@ -286,14 +305,16 @@ async def issue_password_reset(
     )
     token, token_hash = issue_token()
     expires_at = now + timedelta(minutes=30)
-    db.add(AccountToken(
-        purpose="password_reset",
-        token_hash=token_hash,
-        email=user.email,
-        user_id=user.id,
-        created_by_user_id=actor.id,
-        expires_at=expires_at,
-    ))
+    db.add(
+        AccountToken(
+            purpose="password_reset",
+            token_hash=token_hash,
+            email=user.email,
+            user_id=user.id,
+            created_by_user_id=actor.id,
+            expires_at=expires_at,
+        )
+    )
     await db.commit()
     reset_url = _one_time_url("/reset-password", token)
     email_sent = await _email_account_link(user.email, "coach_password_reset", reset_url)

@@ -4,7 +4,9 @@ const RELOAD_COOLDOWN_MS = 60_000;
 /** True for the errors browsers raise when a lazily loaded code chunk is missing. */
 export function isChunkLoadError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error ?? '');
-  return /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|Unable to preload CSS/i.test(message);
+  return /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|Unable to preload CSS/i.test(
+    message,
+  );
 }
 
 /**

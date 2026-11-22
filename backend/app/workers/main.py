@@ -86,25 +86,29 @@ def change_request_email(
         note = f"Coach note: {request.coach_note}\n" if request.coach_note else ""
         return (
             f"Approval needed: {label} from {coach_name}",
-            (f"{coach_name} has asked for a change that needs your approval.\n\n"
-            f"Request: {label}\n"
-            f"Details: {summary}\n"
-            f"{note}\n"
-            f"Review it here: {settings.FRONTEND_URL.rstrip('/')}/requests\n"
-            f"Request reference: {request.id}\n"),
+            (
+                f"{coach_name} has asked for a change that needs your approval.\n\n"
+                f"Request: {label}\n"
+                f"Details: {summary}\n"
+                f"{note}\n"
+                f"Review it here: {settings.FRONTEND_URL.rstrip('/')}/requests\n"
+                f"Request reference: {request.id}\n"
+            ),
         )
     outcome = "approved" if request.status == cr.APPROVED else "not approved"
     note = f"Admin note: {request.review_note}\n" if request.review_note else ""
     reviewer = f"Reviewed by: {reviewer_email}\n" if reviewer_email else ""
     return (
         f"Your request was {outcome}: {label}",
-        (f"Hello {coach_name},\n\n"
-        f"Your request has been {outcome}.\n\n"
-        f"Request: {label}\n"
-        f"Details: {summary}\n"
-        f"{note}{reviewer}\n"
-        f"See your requests: {settings.FRONTEND_URL.rstrip('/')}/my-requests\n"
-        f"Request reference: {request.id}\n"),
+        (
+            f"Hello {coach_name},\n\n"
+            f"Your request has been {outcome}.\n\n"
+            f"Request: {label}\n"
+            f"Details: {summary}\n"
+            f"{note}{reviewer}\n"
+            f"See your requests: {settings.FRONTEND_URL.rstrip('/')}/my-requests\n"
+            f"Request reference: {request.id}\n"
+        ),
     )
 
 
@@ -166,7 +170,9 @@ async def _send_once(
         await db.commit()
 
 
-async def _deliver_change_request_event(db: Any, *, event_key: str, event_type: str, request_id: Any) -> None:
+async def _deliver_change_request_event(
+    db: Any, *, event_key: str, event_type: str, request_id: Any
+) -> None:
     request = await db.get(ChangeRequest, request_id)
     if request is None:
         return  # The coach (and their requests) were deleted; nothing left to tell anyone.
@@ -174,9 +180,16 @@ async def _deliver_change_request_event(db: Any, *, event_key: str, event_type: 
     coach_user = await db.get(User, coach.user_id) if coach else None
     reviewer = await db.get(User, request.reviewed_by) if request.reviewed_by else None
     if event_type == cr.SUBMITTED_EVENT:
-        recipients = list((await db.scalars(select(User.email).where(
-            User.role == UserRole.ADMIN, User.is_active.is_(True),
-        ))).all())
+        recipients = list(
+            (
+                await db.scalars(
+                    select(User.email).where(
+                        User.role == UserRole.ADMIN,
+                        User.is_active.is_(True),
+                    )
+                )
+            ).all()
+        )
     elif event_type == cr.REVIEWED_EVENT:
         recipients = [coach_user.email] if coach_user and coach_user.is_active else []
     else:
@@ -190,8 +203,13 @@ async def _deliver_change_request_event(db: Any, *, event_key: str, event_type: 
     )
     for address in dict.fromkeys(recipients):
         await _send_once(
-            db, address=address, subject=subject, body=body, event_key=event_key,
-            event_type=event_type, change_request_id=request.id,
+            db,
+            address=address,
+            subject=subject,
+            body=body,
+            event_key=event_key,
+            event_type=event_type,
+            change_request_id=request.id,
         )
 
 
@@ -201,9 +219,19 @@ async def _deliver_account_event(db: Any, *, event_key: str, event_type: str, us
     if user is None:
         return
     subject, body = account_notice_email(
-        event_type, name=user.full_name, reset_url=f"{settings.FRONTEND_URL.rstrip('/')}/forgot-password",
+        event_type,
+        name=user.full_name,
+        reset_url=f"{settings.FRONTEND_URL.rstrip('/')}/forgot-password",
     )
-    await _send_once(db, address=user.email, subject=subject, body=body, event_key=event_key, event_type=event_type, user_id=user.id)
+    await _send_once(
+        db,
+        address=user.email,
+        subject=subject,
+        body=body,
+        event_key=event_key,
+        event_type=event_type,
+        user_id=user.id,
+    )
 
 
 async def _process_outbox(ctx: dict[str, Any]) -> int:
@@ -213,11 +241,17 @@ async def _process_outbox(ctx: dict[str, Any]) -> int:
             async with db.begin():
                 event = await db.scalar(
                     select(OutboxEvent)
-                    .where(or_(
-                        OutboxEvent.processing_status == "pending",
-                        and_(OutboxEvent.processing_status == "processing",
-                             OutboxEvent.processing_started_at < datetime.now(UTC) - timedelta(minutes=10)),
-                    ), OutboxEvent.event_type != SEARCH_EVENT_TYPE)
+                    .where(
+                        or_(
+                            OutboxEvent.processing_status == "pending",
+                            and_(
+                                OutboxEvent.processing_status == "processing",
+                                OutboxEvent.processing_started_at
+                                < datetime.now(UTC) - timedelta(minutes=10),
+                            ),
+                        ),
+                        OutboxEvent.event_type != SEARCH_EVENT_TYPE,
+                    )
                     .order_by(OutboxEvent.created_at)
                     .with_for_update(skip_locked=True)
                     .limit(1)
@@ -234,10 +268,15 @@ async def _process_outbox(ctx: dict[str, Any]) -> int:
                 event_payload = dict(event.payload)
             try:
                 if event_type.startswith(ACCOUNT_EVENT_PREFIX):
-                    await _deliver_account_event(db, event_key=event_key, event_type=event_type, user_id=appointment_id)
+                    await _deliver_account_event(
+                        db, event_key=event_key, event_type=event_type, user_id=appointment_id
+                    )
                 elif event_type.startswith(cr.CHANGE_REQUEST_EVENT_PREFIX):
                     await _deliver_change_request_event(
-                        db, event_key=event_key, event_type=event_type, request_id=appointment_id,
+                        db,
+                        event_key=event_key,
+                        event_type=event_type,
+                        request_id=appointment_id,
                     )
                 else:
                     appointment = await db.scalar(
@@ -250,20 +289,44 @@ async def _process_outbox(ctx: dict[str, Any]) -> int:
                     instructor = await db.get(Instructor, appointment.instructor_id)
                     coach_user = await db.get(User, instructor.user_id) if instructor else None
                     admin_user = await db.get(User, appointment.created_by)
-                    recipients = list(dict.fromkeys(
-                        address for address in (
-                            coach_user.email if coach_user else None,
-                            admin_user.email if admin_user else None,
-                            appointment.student.email if appointment.student else None,
-                        ) if address
-                    ))
-                    zone_name = appointment.student.timezone if appointment.student else (instructor.timezone if instructor else "UTC")
-                    event_start = datetime.fromisoformat(event_payload["starts_at"]) if event_payload.get("starts_at") else appointment.starts_at
-                    event_end = datetime.fromisoformat(event_payload["ends_at"]) if event_payload.get("ends_at") else appointment.ends_at
+                    recipients = list(
+                        dict.fromkeys(
+                            address
+                            for address in (
+                                coach_user.email if coach_user else None,
+                                admin_user.email if admin_user else None,
+                                appointment.student.email if appointment.student else None,
+                            )
+                            if address
+                        )
+                    )
+                    zone_name = (
+                        appointment.student.timezone
+                        if appointment.student
+                        else (instructor.timezone if instructor else "UTC")
+                    )
+                    event_start = (
+                        datetime.fromisoformat(event_payload["starts_at"])
+                        if event_payload.get("starts_at")
+                        else appointment.starts_at
+                    )
+                    event_end = (
+                        datetime.fromisoformat(event_payload["ends_at"])
+                        if event_payload.get("ends_at")
+                        else appointment.ends_at
+                    )
                     start = event_start.astimezone(ZoneInfo(zone_name))
                     end = event_end.astimezone(ZoneInfo(zone_name))
-                    coach_start = event_start.astimezone(ZoneInfo(instructor.timezone)) if instructor else event_start
-                    coach_end = event_end.astimezone(ZoneInfo(instructor.timezone)) if instructor else event_end
+                    coach_start = (
+                        event_start.astimezone(ZoneInfo(instructor.timezone))
+                        if instructor
+                        else event_start
+                    )
+                    coach_end = (
+                        event_end.astimezone(ZoneInfo(instructor.timezone))
+                        if instructor
+                        else event_end
+                    )
                     event_label = {
                         "booking.created": "booked",
                         "booking.rescheduled": "rescheduled",
@@ -302,9 +365,15 @@ async def _process_outbox(ctx: dict[str, Any]) -> int:
                             subject,
                             _booking_notification_body(
                                 event_label=event_label,
-                                student_name=appointment.student.name if appointment.student else "Deleted student",
-                                parent_name=(appointment.student.parent_name or "Not provided") if appointment.student else "Not provided",
-                                contact_email=appointment.student.email if appointment.student else "Removed",
+                                student_name=appointment.student.name
+                                if appointment.student
+                                else "Deleted student",
+                                parent_name=(appointment.student.parent_name or "Not provided")
+                                if appointment.student
+                                else "Not provided",
+                                contact_email=appointment.student.email
+                                if appointment.student
+                                else "Removed",
                                 coach_name=instructor.display_name if instructor else "Coach",
                                 student_local_time=f"{start:%A, %B %d, %Y at %I:%M %p %Z} – {end:%I:%M %p %Z}",
                                 coach_local_time=f"{coach_start:%A, %B %d, %Y at %I:%M %p %Z} – {coach_end:%I:%M %p %Z}",
@@ -313,7 +382,9 @@ async def _process_outbox(ctx: dict[str, Any]) -> int:
                                 booking_reference=str(appointment.id),
                             ),
                         )
-                        address_digest = hashlib.sha256(address.strip().lower().encode()).hexdigest()[:16]
+                        address_digest = hashlib.sha256(
+                            address.strip().lower().encode()
+                        ).hexdigest()[:16]
                         sender_domain = settings.MAIL_FROM.rpartition("@")[2] or "localhost"
                         message["Message-ID"] = f"<{event_key}.{address_digest}@{sender_domain}>"
                         try:
@@ -350,12 +421,18 @@ async def _process_outbox(ctx: dict[str, Any]) -> int:
                 if event:
                     event.processing_status = "failed" if event.attempt_count >= 6 else "pending"
                     event.processing_started_at = None
-                pending_records = (await db.scalars(select(NotificationEvent).where(
-                    NotificationEvent.event_key == str(event_id),
-                    NotificationEvent.delivery_status.in_(["queued", "attempting"]),
-                ))).all()
+                pending_records = (
+                    await db.scalars(
+                        select(NotificationEvent).where(
+                            NotificationEvent.event_key == str(event_id),
+                            NotificationEvent.delivery_status.in_(["queued", "attempting"]),
+                        )
+                    )
+                ).all()
                 for record in pending_records:
-                    record.delivery_status = "failed" if event and event.attempt_count >= 6 else "queued"
+                    record.delivery_status = (
+                        "failed" if event and event.attempt_count >= 6 else "queued"
+                    )
                     record.last_error = type(exc).__name__
                 await db.commit()
                 break
@@ -421,7 +498,8 @@ async def _process_search_outbox(ctx: dict[str, Any]) -> int:
                         OutboxEvent.processing_status == "pending",
                         and_(
                             OutboxEvent.processing_status == "processing",
-                            OutboxEvent.processing_started_at < datetime.now(UTC) - timedelta(minutes=10),
+                            OutboxEvent.processing_started_at
+                            < datetime.now(UTC) - timedelta(minutes=10),
                         ),
                     ),
                 )
@@ -545,7 +623,9 @@ async def worker_startup(ctx: dict[str, Any]) -> None:
         await refresh_outbox_metrics()
     except Exception as exc:  # noqa: BLE001 - worker can recover while metrics report its dependency state.
         record_worker_failure("outbox_metrics_refresh")
-        logger.warning("worker_outbox_metrics_initial_refresh_failed", error_type=type(exc).__name__)
+        logger.warning(
+            "worker_outbox_metrics_initial_refresh_failed", error_type=type(exc).__name__
+        )
 
 
 async def worker_shutdown(ctx: dict[str, Any]) -> None:

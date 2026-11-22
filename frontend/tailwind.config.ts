@@ -1,15 +1,23 @@
 import type { Config } from 'tailwindcss';
 
-const shades = (color: string, values: number[]) => Object.fromEntries(
-  values.map((shade) => [shade, `rgb(var(--${color}-${shade}) / <alpha-value>)`]),
-);
+const shades = (color: string, values: number[]) =>
+  Object.fromEntries(values.map((shade) => [shade, `rgb(var(--${color}-${shade}) / <alpha-value>)`]));
 
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Inter Variable"', 'Inter', 'ui-sans-serif', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        sans: [
+          '"Inter Variable"',
+          'Inter',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          '"Segoe UI"',
+          'Roboto',
+          'sans-serif',
+        ],
       },
       colors: {
         surface: 'rgb(var(--surface) / <alpha-value>)',

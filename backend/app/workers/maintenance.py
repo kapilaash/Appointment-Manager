@@ -27,12 +27,28 @@ async def purge_expired_records(db: AsyncSession, *, now: datetime | None = None
     token_cutoff = current - timedelta(days=settings.ACCOUNT_TOKEN_RETENTION_DAYS)
 
     # DELETE statements return a CursorResult, which carries the affected row count.
-    outbox = cast(CursorResult[Any], await db.execute(delete(OutboxEvent).where(or_(
-        and_(OutboxEvent.processing_status == "processed", OutboxEvent.processed_at < processed_cutoff),
-        # Failed events are kept longer so they can still be investigated.
-        and_(OutboxEvent.processing_status == "failed", OutboxEvent.created_at < failed_cutoff),
-    ))))
-    tokens = cast(CursorResult[Any], await db.execute(delete(AccountToken).where(AccountToken.expires_at < token_cutoff)))
+    outbox = cast(
+        CursorResult[Any],
+        await db.execute(
+            delete(OutboxEvent).where(
+                or_(
+                    and_(
+                        OutboxEvent.processing_status == "processed",
+                        OutboxEvent.processed_at < processed_cutoff,
+                    ),
+                    # Failed events are kept longer so they can still be investigated.
+                    and_(
+                        OutboxEvent.processing_status == "failed",
+                        OutboxEvent.created_at < failed_cutoff,
+                    ),
+                )
+            )
+        ),
+    )
+    tokens = cast(
+        CursorResult[Any],
+        await db.execute(delete(AccountToken).where(AccountToken.expires_at < token_cutoff)),
+    )
     await db.commit()
     return {"outbox_events": outbox.rowcount or 0, "account_tokens": tokens.rowcount or 0}
 

@@ -14,10 +14,24 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
   await expect(page.getByText('Academy workspace')).toBeVisible();
 }
 
-async function expectTheme(page: import('@playwright/test').Page, theme: string, pageColor: string, surfaceColor: string) {
+async function expectTheme(
+  page: import('@playwright/test').Page,
+  theme: string,
+  pageColor: string,
+  surfaceColor: string,
+) {
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
-  await expect.poll(() => page.locator('body').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(pageColor);
-  await expect.poll(() => page.locator('main section.bg-surface').first().evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(surfaceColor);
+  await expect
+    .poll(() => page.locator('body').evaluate((element) => getComputedStyle(element).backgroundColor))
+    .toBe(pageColor);
+  await expect
+    .poll(() =>
+      page
+        .locator('main section.bg-surface')
+        .first()
+        .evaluate((element) => getComputedStyle(element).backgroundColor),
+    )
+    .toBe(surfaceColor);
 }
 
 /** Themes are saved to the account, so start each run from the default regardless of earlier runs. */
@@ -30,17 +44,19 @@ async function resetTheme(page: import('@playwright/test').Page) {
 async function mailCount(page: import('@playwright/test').Page) {
   const response = await page.request.get(mailpitMessagesUrl);
   if (!response.ok()) return 0;
-  const data = await response.json() as { total?: number; messages?: unknown[] };
+  const data = (await response.json()) as { total?: number; messages?: unknown[] };
   return data.total ?? data.messages?.length ?? 0;
 }
 
 test('login remains usable on a phone viewport with keyboard navigation', async ({ page }) => {
   test.setTimeout(90_000);
   page.setDefaultNavigationTimeout(90_000);
-  await page.route('**/api/v1/auth/me', (route) => route.fulfill({
-    status: 401,
-    json: { detail: 'Sign in required' },
-  }));
+  await page.route('**/api/v1/auth/me', (route) =>
+    route.fulfill({
+      status: 401,
+      json: { detail: 'Sign in required' },
+    }),
+  );
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   const email = page.getByLabel('Email address');
@@ -57,7 +73,9 @@ test('login remains usable on a phone viewport with keyboard navigation', async 
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
 });
 
-test('coach defaults, meeting links, search, calendar actions, deletion, and deactivation work end to end', async ({ browser }) => {
+test('coach defaults, meeting links, search, calendar actions, deletion, and deactivation work end to end', async ({
+  browser,
+}) => {
   test.setTimeout(180_000);
   const admin = await browser.newContext();
   const adminPage = await admin.newPage();
@@ -143,7 +161,10 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await adminPage.getByRole('button', { name: 'Next day' }).click();
   const teamRow = adminPage.getByRole('listitem').filter({ hasText: instructorName });
   await expect(teamRow).toBeVisible({ timeout: 30_000 });
-  await teamRow.getByRole('link', { name: /free .* Book a demo/ }).first().click();
+  await teamRow
+    .getByRole('link', { name: /free .* Book a demo/ })
+    .first()
+    .click();
   await expect(adminPage.getByLabel('Available coaches').locator('option:checked')).toHaveText(instructorName);
   await adminPage.getByRole('link', { name: 'Settings' }).click();
   await expectTheme(adminPage, 'light', 'rgb(248, 250, 252)', 'rgb(255, 255, 255)');
@@ -154,8 +175,13 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await adminPage.getByRole('link', { name: 'Book a demo' }).click();
   await expectTheme(adminPage, 'classic', 'rgb(247, 243, 232)', 'rgb(255, 253, 246)');
   await adminPage.getByLabel('Available coaches').selectOption({ label: instructorName });
-  await expect(adminPage.getByLabel('Meeting link for this demo (optional)')).toHaveValue('https://meet.example.test/coach-room');
-  await adminPage.getByRole('button', { name: /^\d{1,2}:\d{2}\s(?:AM|PM)$/i }).first().click();
+  await expect(adminPage.getByLabel('Meeting link for this demo (optional)')).toHaveValue(
+    'https://meet.example.test/coach-room',
+  );
+  await adminPage
+    .getByRole('button', { name: /^\d{1,2}:\d{2}\s(?:AM|PM)$/i })
+    .first()
+    .click();
   await adminPage.getByRole('button', { name: 'Continue' }).click();
   await adminPage.getByLabel('Student name').fill(studentName);
   await adminPage.getByLabel('Contact email').fill(`student-${uniqueId}@example.com`);
@@ -164,20 +190,29 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await adminPage.getByRole('button', { name: 'Review booking' }).click();
   await expect(adminPage.locator('a[href="https://meet.example.test/coach-room"]')).toBeVisible();
 
-  const bookingResponsePromise = adminPage.waitForResponse((response) =>
-    response.url().endsWith('/api/v1/appointments') && response.request().method() === 'POST',
+  const bookingResponsePromise = adminPage.waitForResponse(
+    (response) => response.url().endsWith('/api/v1/appointments') && response.request().method() === 'POST',
   );
   await adminPage.getByRole('button', { name: 'Confirm demo class' }).click();
   const bookingResponse = await bookingResponsePromise;
-  const booking = await bookingResponse.json() as { id: string; meeting_url: string };
+  const booking = (await bookingResponse.json()) as { id: string; meeting_url: string };
   expect(booking.meeting_url).toBe('https://meet.example.test/coach-room');
   await expect(adminPage.getByText('Demo class booked')).toBeVisible();
-  await expect(adminPage.getByText('The meeting link is included in the booking details and notifications.')).toBeVisible();
+  await expect(
+    adminPage.getByText('The meeting link is included in the booking details and notifications.'),
+  ).toBeVisible();
   await expect.poll(() => mailCount(adminPage), { timeout: 30_000 }).toBeGreaterThanOrEqual(initialMailCount + 5);
 
   await adminPage.goto(`/calendar?appointment=${booking.id}`);
   await expectTheme(adminPage, 'classic', 'rgb(247, 243, 232)', 'rgb(255, 253, 246)');
-  await expect.poll(() => adminPage.locator('.calendar-theme .fc .fc-button-primary').first().evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(40, 101, 66)');
+  await expect
+    .poll(() =>
+      adminPage
+        .locator('.calendar-theme .fc .fc-button-primary')
+        .first()
+        .evaluate((element) => getComputedStyle(element).backgroundColor),
+    )
+    .toBe('rgb(40, 101, 66)');
   const calendarEvent = adminPage.locator('.calendar-theme .fc-event').filter({ hasText: studentName }).first();
   await expect(calendarEvent).toBeVisible({ timeout: 30_000 });
   await expect(calendarEvent).toHaveCSS('background-color', 'rgb(40, 101, 66)');
@@ -199,7 +234,10 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await expectTheme(adminPage, 'classic', 'rgb(247, 243, 232)', 'rgb(255, 253, 246)');
   await expect(adminPage.getByText(studentName)).toBeVisible({ timeout: 30_000 });
   const appointmentRow = adminPage.getByRole('article').filter({ hasText: studentName });
-  await expect(appointmentRow.getByRole('link', { name: 'Join demo' })).toHaveAttribute('href', 'https://meet.example.test/coach-room');
+  await expect(appointmentRow.getByRole('link', { name: 'Join demo' })).toHaveAttribute(
+    'href',
+    'https://meet.example.test/coach-room',
+  );
 
   const search = adminPage.getByLabel('Search appointments');
   await search.fill(studentName.replace(/^C/, 'X'));
@@ -239,7 +277,9 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await expect(studentRow).toBeVisible();
   await studentRow.getByRole('button', { name: 'Delete student' }).click();
   await adminPage.getByRole('button', { name: 'Delete student data' }).click();
-  await expect(adminPage.getByText('Student record deleted. Past bookings remain without student details.')).toBeVisible();
+  await expect(
+    adminPage.getByText('Student record deleted. Past bookings remain without student details.'),
+  ).toBeVisible();
 
   await adminPage.getByRole('link', { name: 'Appointments' }).click();
   const deletedAppointmentRow = adminPage.getByRole('article').filter({ hasText: booking.id });

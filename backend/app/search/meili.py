@@ -27,7 +27,9 @@ async def _request(method: str, path: str, **kwargs: Any) -> dict[str, Any]:
     except httpx.HTTPError as exc:
         raise SearchUnavailable("Meilisearch could not be reached") from exc
     if response.is_error:
-        raise SearchUnavailable(f"Meilisearch returned HTTP {response.status_code}", status_code=response.status_code)
+        raise SearchUnavailable(
+            f"Meilisearch returned HTTP {response.status_code}", status_code=response.status_code
+        )
     if response.status_code == 204 or not response.content:
         return {}
     return response.json()

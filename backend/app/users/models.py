@@ -51,13 +51,17 @@ class User(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         ),
     )
 
-    instructor_profile: Mapped["Instructor"] = relationship("Instructor", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    instructor_profile: Mapped["Instructor"] = relationship(
+        "Instructor", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
 
 
 class Instructor(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "instructors"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
     display_name: Mapped[str] = mapped_column(String(150), nullable=False)
     timezone: Mapped[str] = mapped_column(String(50), default="Asia/Kolkata", nullable=False)
     country_code: Mapped[str | None] = mapped_column(String(2))

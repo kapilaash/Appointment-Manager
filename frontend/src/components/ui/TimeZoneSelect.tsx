@@ -2,9 +2,9 @@ import { getCountryCode, getTimeZones } from '@vvo/tzdb';
 
 const locale = Intl.DateTimeFormat().resolvedOptions().locale || 'en';
 const timeZones = getTimeZones({ locale }).filter((zone) => /^[A-Z]{2}$/.test(zone.countryCode));
-const countries = Array.from(
-  new Map(timeZones.map((zone) => [zone.countryCode, zone.countryName])).entries(),
-).sort((left, right) => left[1].localeCompare(right[1], locale));
+const countries = Array.from(new Map(timeZones.map((zone) => [zone.countryCode, zone.countryName])).entries()).sort(
+  (left, right) => left[1].localeCompare(right[1], locale),
+);
 
 type Props = {
   countryCode: string;
@@ -19,10 +19,14 @@ type Props = {
 };
 
 function offsetLabel(timezone: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    timeZone: timezone,
-    timeZoneName: 'shortOffset',
-  }).formatToParts(new Date()).find((part) => part.type === 'timeZoneName')?.value ?? '';
+  return (
+    new Intl.DateTimeFormat(locale, {
+      timeZone: timezone,
+      timeZoneName: 'shortOffset',
+    })
+      .formatToParts(new Date())
+      .find((part) => part.type === 'timeZoneName')?.value ?? ''
+  );
 }
 
 export function TimeZoneSelect({
@@ -56,7 +60,11 @@ export function TimeZoneSelect({
           className={`mt-1.5 w-full rounded-lg border border-slate-300 bg-surface px-3 py-2.5 text-sm ${className}`}
         >
           <option value="">Choose a country</option>
-          {countries.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+          {countries.map(([code, name]) => (
+            <option key={code} value={code}>
+              {name}
+            </option>
+          ))}
         </select>
       </label>
       <label className="block text-sm font-medium text-slate-700">
@@ -71,7 +79,8 @@ export function TimeZoneSelect({
           <option value="">{selectedCountry ? 'Choose a region or city' : 'Choose a country first'}</option>
           {countryZones.map((zone) => (
             <option key={zone.name} value={zone.name}>
-            {zone.alternativeName} · {zone.mainCities.join(', ')} · {zone.name} (current offset {offsetLabel(zone.name)})
+              {zone.alternativeName} · {zone.mainCities.join(', ')} · {zone.name} (current offset{' '}
+              {offsetLabel(zone.name)})
             </option>
           ))}
         </select>

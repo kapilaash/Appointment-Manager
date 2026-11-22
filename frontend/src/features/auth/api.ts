@@ -19,7 +19,12 @@ export function isMfaChallenge(value: unknown): value is MfaChallenge {
   return typeof value === 'object' && value !== null && (value as { mfa_required?: unknown }).mfa_required === true;
 }
 
-export type SecurityOverview = { mfa_enabled: boolean; mfa_enabled_at: string | null; recovery_codes_remaining: number; password_changed_at: string | null };
+export type SecurityOverview = {
+  mfa_enabled: boolean;
+  mfa_enabled_at: string | null;
+  recovery_codes_remaining: number;
+  password_changed_at: string | null;
+};
 
 export const authApi = api.injectEndpoints({
   endpoints: (build) => ({
@@ -39,7 +44,10 @@ export const authApi = api.injectEndpoints({
     resetPassword: build.mutation<void, { token: string; password: string }>({
       query: (body) => ({ url: '/auth/password-reset', method: 'POST', body }),
     }),
-    securityOverview: build.query<SecurityOverview, void>({ query: () => '/auth/me/security', providesTags: ['Security'] }),
+    securityOverview: build.query<SecurityOverview, void>({
+      query: () => '/auth/me/security',
+      providesTags: ['Security'],
+    }),
     changePassword: build.mutation<void, { current_password: string; new_password: string }>({
       query: (body) => ({ url: '/auth/me/password', method: 'POST', body }),
       invalidatesTags: ['Security'],
@@ -65,15 +73,24 @@ export const authApi = api.injectEndpoints({
       onQueryStarted: async (_arg, { dispatch, queryFulfilled }) => {
         try {
           const { data } = await queryFulfilled;
-          dispatch(authApi.util.updateQueryData('me', undefined, (draft) => { draft.theme_preference = data.theme_preference ?? null; }));
+          dispatch(
+            authApi.util.updateQueryData('me', undefined, (draft) => {
+              draft.theme_preference = data.theme_preference ?? null;
+            }),
+          );
         } catch {
           // Keep the local choice; it is saved to the account next time.
         }
       },
     }),
-    logout: build.mutation<void, void>({ query: () => ({ url: '/auth/logout', method: 'POST' }),
+    logout: build.mutation<void, void>({
+      query: () => ({ url: '/auth/logout', method: 'POST' }),
       onQueryStarted: async (_arg, { dispatch, queryFulfilled }) => {
-        try { await queryFulfilled; } finally { dispatch(authApi.util.resetApiState()); }
+        try {
+          await queryFulfilled;
+        } finally {
+          dispatch(authApi.util.resetApiState());
+        }
       },
     }),
   }),

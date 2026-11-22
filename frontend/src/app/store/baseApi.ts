@@ -7,7 +7,10 @@ export const baseApi = createApi({
     credentials: 'include', // Automatically sends and receives HttpOnly session cookies
     prepareHeaders: (headers) => {
       if (!headers.has('X-Request-ID')) {
-        headers.set('X-Request-ID', globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
+        headers.set(
+          'X-Request-ID',
+          globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+        );
       }
 
       // Extract CSRF token from document cookie if present
@@ -27,6 +30,20 @@ export const baseApi = createApi({
   // Several staff edit the same schedule: when a page is revisited, refresh data older than 10 seconds
   // so changes made by others (approvals, bookings) appear without a manual reload.
   refetchOnMountOrArgChange: 10,
-  tagTypes: ['Auth', 'Coaches', 'Instructor', 'Instructors', 'Availability', 'Appointment', 'Appointments', 'Student', 'Students', 'Dashboard', 'DashboardStats', 'ChangeRequests', 'Security'],
+  tagTypes: [
+    'Auth',
+    'Coaches',
+    'Instructor',
+    'Instructors',
+    'Availability',
+    'Appointment',
+    'Appointments',
+    'Student',
+    'Students',
+    'Dashboard',
+    'DashboardStats',
+    'ChangeRequests',
+    'Security',
+  ],
   endpoints: () => ({}),
 });

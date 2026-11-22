@@ -34,9 +34,18 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <Icon size={18} aria-hidden="true" className={toast.tone === 'success' ? 'mt-0.5 shrink-0 text-emerald-600' : 'mt-0.5 shrink-0 text-indigo-600'} />
+      <Icon
+        size={18}
+        aria-hidden="true"
+        className={toast.tone === 'success' ? 'mt-0.5 shrink-0 text-emerald-600' : 'mt-0.5 shrink-0 text-indigo-600'}
+      />
       <p className="flex-1 leading-5">{toast.message}</p>
-      <button type="button" onClick={() => onDismiss(toast.id)} aria-label="Dismiss notification" className="-m-1 grid h-8 w-8 min-h-0 min-w-0 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+      <button
+        type="button"
+        onClick={() => onDismiss(toast.id)}
+        aria-label="Dismiss notification"
+        className="-m-1 grid h-8 min-h-0 w-8 min-w-0 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+      >
         <X size={15} aria-hidden="true" />
       </button>
     </div>
@@ -61,9 +70,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         role="status"
         aria-live="polite"
-        className="pointer-events-none fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm flex-col gap-2 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:mx-0 sm:w-96"
+        className="pointer-events-none fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-sm flex-col gap-2 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:mx-0 sm:w-96"
       >
-        {toasts.map((toast) => <ToastItem key={toast.id} toast={toast} onDismiss={dismiss} />)}
+        {toasts.map((toast) => (
+          <ToastItem key={toast.id} toast={toast} onDismiss={dismiss} />
+        ))}
       </div>
     </ToastContext.Provider>
   );

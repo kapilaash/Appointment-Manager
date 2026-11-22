@@ -35,11 +35,18 @@ class FakeSession:
 
 
 def test_meeting_links_require_https_and_reject_embedded_credentials() -> None:
-    assert _validated_meeting_url("  https://meet.example.com/room  ") == "https://meet.example.com/room"
+    assert (
+        _validated_meeting_url("  https://meet.example.com/room  ")
+        == "https://meet.example.com/room"
+    )
     assert _validated_meeting_url(None) is None
     assert _validated_meeting_url("  ") is None
 
-    for link in ("http://meet.example.com/room", "https://user:password@meet.example.com/room", "https://meet example.com"):
+    for link in (
+        "http://meet.example.com/room",
+        "https://user:password@meet.example.com/room",
+        "https://meet example.com",
+    ):
         with pytest.raises(ValueError):
             _validated_meeting_url(link)
 
@@ -142,7 +149,9 @@ def test_deleted_student_history_is_indexed_without_personal_information() -> No
 
 
 @pytest.mark.asyncio
-async def test_meilisearch_index_enables_reasonable_first_letter_tolerance(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_meilisearch_index_enables_reasonable_first_letter_tolerance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     requests: list[tuple[str, str, dict]] = []
 
     async def fake_request(method: str, path: str, **kwargs: object) -> dict:
@@ -160,4 +169,3 @@ async def test_meilisearch_index_enables_reasonable_first_letter_tolerance(monke
     settings = requests[-1][2]["json"]["typoTolerance"]
     assert settings["minWordSizeForTypos"] == {"oneTypo": 3, "twoTypos": 4}
     assert settings["disableOnAttributes"] == ["booking_reference"]
-

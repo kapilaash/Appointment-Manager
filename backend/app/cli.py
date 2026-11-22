@@ -20,7 +20,9 @@ def cli():
 
 @cli.command()
 @click.option("--email", prompt="Admin Email", help="The administrator email address")
-@click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="Admin Password")
+@click.option(
+    "--password", prompt=True, hide_input=True, confirmation_prompt=True, help="Admin Password"
+)
 @click.option("--name", default="Super Admin", help="Full Name")
 def seed_admin(email, password, name):
     """Seed or update the default administrator user safely."""
@@ -46,7 +48,7 @@ def seed_admin(email, password, name):
                     password_hash=hash_password(password),
                     role=UserRole.ADMIN,
                     full_name=name,
-                    is_active=True
+                    is_active=True,
                 )
                 session.add(user)
 
@@ -57,8 +59,12 @@ def seed_admin(email, password, name):
 
 
 @cli.command()
-@click.option("--email", prompt="User Email", help="Email of the user whose password is to be reset")
-@click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="New Password")
+@click.option(
+    "--email", prompt="User Email", help="Email of the user whose password is to be reset"
+)
+@click.option(
+    "--password", prompt=True, hide_input=True, confirmation_prompt=True, help="New Password"
+)
 def reset_password(email, password):
     """Emergency reset for any user (e.g. when email delivery is down). Signs them out everywhere."""
     if not _password_ok(password, email):
@@ -81,9 +87,14 @@ def reset_password(email, password):
 
 
 @cli.command("reset-mfa")
-@click.option("--email", prompt="User Email", help="Account that lost its authenticator app and recovery codes")
+@click.option(
+    "--email",
+    prompt="User Email",
+    help="Account that lost its authenticator app and recovery codes",
+)
 def reset_mfa(email):
     """Emergency: turn off two-step sign-in for a user who lost both their phone and recovery codes."""
+
     async def _reset():
         async with AsyncSessionLocal() as session:
             user = await session.scalar(select(User).where(User.email == email.strip().lower()))
@@ -96,7 +107,9 @@ def reset_mfa(email):
             queue_account_notice(session, user, MFA_DISABLED)
             await session.commit()
             await _sign_out_everywhere(user)
-            click.secho(f"Two-step sign-in turned off for {email}. Ask them to set it up again.", fg="green")
+            click.secho(
+                f"Two-step sign-in turned off for {email}. Ask them to set it up again.", fg="green"
+            )
 
     asyncio.run(_reset())
 
@@ -113,16 +126,25 @@ async def _sign_out_everywhere(user: User) -> None:
     try:
         await SessionStore.destroy_user_sessions(user.id)
     except RedisError:
-        click.secho("Warning: could not reach Redis to sign the user out of existing sessions.", fg="yellow")
+        click.secho(
+            "Warning: could not reach Redis to sign the user out of existing sessions.", fg="yellow"
+        )
 
 
 @cli.command()
 @click.option("--email", prompt="Instructor Email", help="Instructor's email address")
-@click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="Instructor Password")
+@click.option(
+    "--password", prompt=True, hide_input=True, confirmation_prompt=True, help="Instructor Password"
+)
 @click.option("--name", prompt="Display Name", help="Public instructor name")
-@click.option("--timezone", default="Asia/Kolkata", help="Timezone identifier (e.g. Asia/Kolkata, America/New_York)")
+@click.option(
+    "--timezone",
+    default="Asia/Kolkata",
+    help="Timezone identifier (e.g. Asia/Kolkata, America/New_York)",
+)
 def create_instructor(email, password, name, timezone):
     """Create a new instructor user with linked instructor profile."""
+
     async def _create():
         async with AsyncSessionLocal() as session:
             stmt = select(User).where(User.email == email.strip().lower())
@@ -136,20 +158,20 @@ def create_instructor(email, password, name, timezone):
                 password_hash=hash_password(password),
                 role=UserRole.INSTRUCTOR,
                 full_name=name,
-                is_active=True
+                is_active=True,
             )
             session.add(user)
             await session.flush()
 
             instructor = Instructor(
-                user_id=user.id,
-                display_name=name,
-                timezone=timezone,
-                is_available_for_booking=True
+                user_id=user.id, display_name=name, timezone=timezone, is_available_for_booking=True
             )
             session.add(instructor)
             await session.commit()
-            click.secho(f"Successfully created instructor {name} ({email}) with timezone {timezone}", fg="green")
+            click.secho(
+                f"Successfully created instructor {name} ({email}) with timezone {timezone}",
+                fg="green",
+            )
 
     asyncio.run(_create())
 

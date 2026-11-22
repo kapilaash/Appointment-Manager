@@ -14,7 +14,9 @@ export function PageSkeleton() {
         <Skeleton className="h-4 w-80 max-w-full" />
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
-        {[0, 1, 2].map((item) => <Skeleton key={item} className="h-24 rounded-2xl" />)}
+        {[0, 1, 2].map((item) => (
+          <Skeleton key={item} className="h-24 rounded-2xl" />
+        ))}
       </div>
       <Skeleton className="h-72 rounded-2xl" />
     </div>

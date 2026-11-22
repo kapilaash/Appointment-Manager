@@ -87,8 +87,26 @@ def _request_out(item: ChangeRequest, coach: Instructor | None, emails: dict[UUI
 async def _serialize(db: AsyncSession, items: list[ChangeRequest]) -> list[dict]:
     coach_ids = {item.instructor_id for item in items}
     user_ids = {uid for item in items for uid in (item.requested_by, item.reviewed_by) if uid}
-    coaches = {c.id: c for c in (await db.scalars(select(Instructor).where(Instructor.id.in_(coach_ids)))).all()} if coach_ids else {}
-    emails = {uid: email for uid, email in (await db.execute(select(User.id, User.email).where(User.id.in_(user_ids)))).all()} if user_ids else {}
+    coaches = (
+        {
+            c.id: c
+            for c in (
+                await db.scalars(select(Instructor).where(Instructor.id.in_(coach_ids)))
+            ).all()
+        }
+        if coach_ids
+        else {}
+    )
+    emails = (
+        {
+            uid: email
+            for uid, email in (
+                await db.execute(select(User.id, User.email).where(User.id.in_(user_ids)))
+            ).all()
+        }
+        if user_ids
+        else {}
+    )
     return [_request_out(item, coaches.get(item.instructor_id), emails) for item in items]
 
 
@@ -96,7 +114,9 @@ async def _serialize(db: AsyncSession, items: list[ChangeRequest]) -> list[dict]
 async def list_change_requests(
     status: str | None = Query(default=None),
     instructor_id: UUID | None = None,
-    before: datetime | None = Query(default=None, description="Cursor: created_at of the last item already shown"),
+    before: datetime | None = Query(
+        default=None, description="Cursor: created_at of the last item already shown"
+    ),
     limit: int = Query(default=50, ge=1, le=100),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session),
@@ -114,18 +134,24 @@ async def list_change_requests(
     if before is not None:
         query = query.where(ChangeRequest.created_at < before)
     # Pending requests are worked oldest-first; history reads newest-first.
-    order = ChangeRequest.created_at.asc() if status == cr.PENDING else ChangeRequest.created_at.desc()
+    order = (
+        ChangeRequest.created_at.asc() if status == cr.PENDING else ChangeRequest.created_at.desc()
+    )
     rows = list((await db.scalars(query.order_by(order, ChangeRequest.id).limit(limit + 1))).all())
     has_more = len(rows) > limit
     rows = rows[:limit]
     return {
         "items": await _serialize(db, rows),
-        "next_cursor": rows[-1].created_at.isoformat() if has_more and status != cr.PENDING else None,
+        "next_cursor": rows[-1].created_at.isoformat()
+        if has_more and status != cr.PENDING
+        else None,
     }
 
 
 @router.get("/pending-count")
-async def pending_count(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> dict[str, int]:
+async def pending_count(
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)
+) -> dict[str, int]:
     query = select(func.count(ChangeRequest.id)).where(ChangeRequest.status == cr.PENDING)
     own_coach_id = await _coach_id_for(db, user)
     if own_coach_id is not None:
@@ -133,7 +159,9 @@ async def pending_count(user: User = Depends(get_current_user), db: AsyncSession
     return {"pending": int(await db.scalar(query) or 0)}
 
 
-async def _locked_pending(db: AsyncSession, request_id: UUID, owner_coach_id: UUID | None = None) -> ChangeRequest:
+async def _locked_pending(
+    db: AsyncSession, request_id: UUID, owner_coach_id: UUID | None = None
+) -> ChangeRequest:
     query = select(ChangeRequest).where(ChangeRequest.id == request_id)
     if owner_coach_id is not None:
         query = query.where(ChangeRequest.instructor_id == owner_coach_id)
@@ -146,11 +174,15 @@ async def _locked_pending(db: AsyncSession, request_id: UUID, owner_coach_id: UU
 
 
 def _queue_reviewed(db: AsyncSession, item: ChangeRequest) -> None:
-    db.add(OutboxEvent(
-        event_type=cr.REVIEWED_EVENT, aggregate_id=item.id,
-        payload={"change_request_id": str(item.id), "status": item.status},
-        processing_status="pending", attempt_count=0,
-    ))
+    db.add(
+        OutboxEvent(
+            event_type=cr.REVIEWED_EVENT,
+            aggregate_id=item.id,
+            payload={"change_request_id": str(item.id), "status": item.status},
+            processing_status="pending",
+            attempt_count=0,
+        )
+    )
 
 
 async def _apply(db: AsyncSession, item: ChangeRequest) -> list[str]:
@@ -160,7 +192,9 @@ async def _apply(db: AsyncSession, item: ChangeRequest) -> list[str]:
         raise HTTPException(409, "The coach for this request no longer exists")
     payload = item.payload
     if item.request_type == cr.WEEKLY_AVAILABILITY:
-        return await apply_weekly_rules(db, coach, [RuleIn.model_validate(rule) for rule in payload["rules"]])
+        return await apply_weekly_rules(
+            db, coach, [RuleIn.model_validate(rule) for rule in payload["rules"]]
+        )
     if item.request_type == cr.EXCEPTION_ADD:
         _, affected = await apply_exception_add(db, coach, ExceptionIn.model_validate(payload))
         return affected
@@ -173,15 +207,23 @@ async def _apply(db: AsyncSession, item: ChangeRequest) -> list[str]:
         await apply_timezone_change(db, coach, payload["timezone"], payload.get("country_code"))
         return []
     if item.request_type in (cr.APPOINTMENT_CANCEL, cr.APPOINTMENT_RESCHEDULE):
-        appointment = await db.scalar(
-            select(Appointment).options(selectinload(Appointment.student)).where(Appointment.id == item.appointment_id)
-        ) if item.appointment_id else None
+        appointment = (
+            await db.scalar(
+                select(Appointment)
+                .options(selectinload(Appointment.student))
+                .where(Appointment.id == item.appointment_id)
+            )
+            if item.appointment_id
+            else None
+        )
         if appointment is None:
             raise HTTPException(409, "The demo for this request no longer exists")
         if item.request_type == cr.APPOINTMENT_CANCEL:
             await apply_cancel(db, appointment, payload["reason"])
         else:
-            await apply_reschedule(db, appointment, datetime.fromisoformat(payload["starts_at"]), payload["reason"])
+            await apply_reschedule(
+                db, appointment, datetime.fromisoformat(payload["starts_at"]), payload["reason"]
+            )
         return []
     raise HTTPException(409, "Unsupported request type")
 
@@ -210,7 +252,10 @@ async def approve_change_request(
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(409, "Could not apply this request: the time was just booked. Reject it or ask the coach to pick another time.") from exc
+        raise HTTPException(
+            409,
+            "Could not apply this request: the time was just booked. Reject it or ask the coach to pick another time.",
+        ) from exc
     return {
         "request": (await _serialize(db, [item]))[0],
         "affected_bookings": affected,

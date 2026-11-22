@@ -19,9 +19,16 @@ export function PasswordField({ label, hint, withIcon = false, className, ...pro
   const [visible, setVisible] = useState(false);
   return (
     <div className={className}>
-      <label htmlFor={id} className="block text-sm font-semibold text-slate-800">{label}</label>
+      <label htmlFor={id} className="block text-sm font-semibold text-slate-800">
+        {label}
+      </label>
       <div className="relative mt-2">
-        {withIcon && <Lock aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />}
+        {withIcon && (
+          <Lock
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+          />
+        )}
         <input
           id={id}
           type={visible ? 'text' : 'password'}
@@ -45,9 +52,14 @@ export function PasswordField({ label, hint, withIcon = false, className, ...pro
           {visible ? 'Hide' : 'Show'}
         </button>
       </div>
-      {hint && <p id={hintId} className="mt-1.5 text-xs leading-5 text-slate-500">{hint}</p>}
+      {hint && (
+        <p id={hintId} className="mt-1.5 text-xs leading-5 text-slate-500">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }
 
-export const PASSWORD_HINT = 'At least 12 characters. A short phrase of a few unrelated words is strong and easy to remember.';
+export const PASSWORD_HINT =
+  'At least 12 characters. A short phrase of a few unrelated words is strong and easy to remember.';

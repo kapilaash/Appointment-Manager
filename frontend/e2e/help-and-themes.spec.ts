@@ -15,13 +15,17 @@ const coach = {
 
 async function mockWorkspace(page: import('@playwright/test').Page, user: typeof admin | typeof coach) {
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: user }));
-  await page.route('**/api/v1/auth/me/preferences', async (route) => route.fulfill({
-    json: { ...user, theme_preference: (route.request().postDataJSON() as { theme: string }).theme },
-  }));
+  await page.route('**/api/v1/auth/me/preferences', async (route) =>
+    route.fulfill({
+      json: { ...user, theme_preference: (route.request().postDataJSON() as { theme: string }).theme },
+    }),
+  );
   await page.route('**/api/v1/change-requests/pending-count', (route) => route.fulfill({ json: { pending: 0 } }));
-  await page.route('**/api/v1/settings', (route) => route.fulfill({
-    json: { demo_duration_minutes: 60, slot_interval_minutes: 30, buffer_before_minutes: 0, buffer_after_minutes: 0 },
-  }));
+  await page.route('**/api/v1/settings', (route) =>
+    route.fulfill({
+      json: { demo_duration_minutes: 60, slot_interval_minutes: 30, buffer_before_minutes: 0, buffer_after_minutes: 0 },
+    }),
+  );
 }
 
 test('admins can change themes and find role-specific workflow help on desktop and mobile', async ({ page }) => {
@@ -44,7 +48,8 @@ test('admins can change themes and find role-specific workflow help on desktop a
   await expect(themeGroup.getByRole('radio')).toHaveCount(4);
   const savedThemes: string[] = [];
   page.on('request', (request) => {
-    if (request.url().endsWith('/api/v1/auth/me/preferences')) savedThemes.push((request.postDataJSON() as { theme: string }).theme);
+    if (request.url().endsWith('/api/v1/auth/me/preferences'))
+      savedThemes.push((request.postDataJSON() as { theme: string }).theme);
   });
   for (const [theme, label, background] of themes) {
     const radio = themeGroup.getByRole('radio', { name: new RegExp(label, 'i') });
@@ -133,9 +138,11 @@ test('a temporary API outage offers recovery without pretending the user is sign
   let requests = 0;
   await page.route('**/api/v1/auth/me', (route) => {
     requests += 1;
-    return route.fulfill(requests === 1
-      ? { status: 503, json: { detail: 'Temporarily unavailable' } }
-      : { status: 401, json: { detail: 'Sign in required' } });
+    return route.fulfill(
+      requests === 1
+        ? { status: 503, json: { detail: 'Temporarily unavailable' } }
+        : { status: 401, json: { detail: 'Sign in required' } },
+    );
   });
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });

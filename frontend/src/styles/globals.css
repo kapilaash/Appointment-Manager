@@ -200,17 +200,20 @@ html[data-theme='dark'] .theme-canvas {
   }
 
   body {
-    @apply min-h-screen bg-slate-50 font-sans antialiased text-slate-900;
+    @apply min-h-screen bg-slate-50 font-sans text-slate-900 antialiased;
     /* Inter's single-storey a and open digits read better at small UI sizes. */
     font-feature-settings: 'cv11', 'ss01';
   }
 
-  h1, h2, h3 {
+  h1,
+  h2,
+  h3 {
     letter-spacing: -0.011em;
     text-wrap: balance;
   }
 
-  time, .tabular-nums {
+  time,
+  .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
 
@@ -279,13 +282,23 @@ html[data-theme='dark'] .theme-canvas {
   .toast-enter,
   .mobile-sheet-enter,
   dialog[open]::backdrop,
-  .skeleton::after { animation: none !important; }
-  .calendar-theme .fc .fc-event { transition: none !important; }
+  .skeleton::after {
+    animation: none !important;
+  }
+  .calendar-theme .fc .fc-event {
+    transition: none !important;
+  }
 }
 
 @keyframes ui-enter {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .ui-enter {
@@ -293,8 +306,14 @@ html[data-theme='dark'] .theme-canvas {
 }
 
 @keyframes dialog-enter {
-  from { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.97); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 .dialog-enter {
@@ -306,8 +325,12 @@ dialog[open]::backdrop {
 }
 
 @keyframes backdrop-enter {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Loading placeholders: a soft shimmer that is cheap (one transform animation per block). */
@@ -327,12 +350,20 @@ dialog[open]::backdrop {
 }
 
 @keyframes skeleton-shimmer {
-  to { transform: translateX(100%); }
+  to {
+    transform: translateX(100%);
+  }
 }
 
 @keyframes toast-enter {
-  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.98); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 .toast-enter {
@@ -340,8 +371,14 @@ dialog[open]::backdrop {
 }
 
 @keyframes page-enter {
-  from { opacity: 0; transform: translate3d(0, 9px, 0) scale(0.997); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translate3d(0, 9px, 0) scale(0.997);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 .page-enter {
@@ -350,8 +387,14 @@ dialog[open]::backdrop {
 }
 
 @keyframes mobile-sheet-enter {
-  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.985); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 
 .mobile-sheet-enter {
@@ -379,21 +422,66 @@ dialog[open]::backdrop {
   font-family: inherit;
   font-size: 0.875rem;
 }
-.calendar-theme .fc .fc-button-primary { text-transform: capitalize; }
-.calendar-theme .fc .fc-button-primary:disabled { opacity: 0.55; }
-.calendar-theme .fc .fc-toolbar-title { font-size: 1.05rem; font-weight: 650; }
-.calendar-theme .fc .fc-list-event:hover td { background-color: rgb(var(--indigo-50)); }
-.calendar-theme .fc .fc-event { border-radius: 5px; padding: 2px 4px; }
-.calendar-theme .fc .fc-event { cursor: pointer; transition: filter 150ms ease, box-shadow 150ms ease; }
-.calendar-theme .fc .fc-event:hover { filter: brightness(1.05); box-shadow: 0 2px 8px rgb(15 23 42 / 18%); }
-.calendar-theme .fc .fc-event.calendar-event-confirmed { background: rgb(var(--calendar-confirmed-bg)); border-color: rgb(var(--calendar-confirmed-bg)); color: rgb(var(--calendar-confirmed-text)) !important; }
-.calendar-theme .fc .fc-event.calendar-event-cancelled { background: rgb(var(--calendar-cancelled-bg)); border-color: rgb(var(--calendar-cancelled-bg)); color: rgb(var(--calendar-cancelled-text)) !important; }
-.calendar-theme .fc .fc-event.calendar-event-completed { background: rgb(var(--calendar-completed-bg)); border-color: rgb(var(--calendar-completed-bg)); color: rgb(var(--calendar-completed-text)) !important; }
-.calendar-theme .fc .fc-event .fc-event-main { color: inherit; }
+.calendar-theme .fc .fc-button-primary {
+  text-transform: capitalize;
+}
+.calendar-theme .fc .fc-button-primary:disabled {
+  opacity: 0.55;
+}
+.calendar-theme .fc .fc-toolbar-title {
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+.calendar-theme .fc .fc-list-event:hover td {
+  background-color: rgb(var(--indigo-50));
+}
+.calendar-theme .fc .fc-event {
+  border-radius: 5px;
+  padding: 2px 4px;
+}
+.calendar-theme .fc .fc-event {
+  cursor: pointer;
+  transition:
+    filter 150ms ease,
+    box-shadow 150ms ease;
+}
+.calendar-theme .fc .fc-event:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 2px 8px rgb(15 23 42 / 18%);
+}
+.calendar-theme .fc .fc-event.calendar-event-confirmed {
+  background: rgb(var(--calendar-confirmed-bg));
+  border-color: rgb(var(--calendar-confirmed-bg));
+  color: rgb(var(--calendar-confirmed-text)) !important;
+}
+.calendar-theme .fc .fc-event.calendar-event-cancelled {
+  background: rgb(var(--calendar-cancelled-bg));
+  border-color: rgb(var(--calendar-cancelled-bg));
+  color: rgb(var(--calendar-cancelled-text)) !important;
+}
+.calendar-theme .fc .fc-event.calendar-event-completed {
+  background: rgb(var(--calendar-completed-bg));
+  border-color: rgb(var(--calendar-completed-bg));
+  color: rgb(var(--calendar-completed-text)) !important;
+}
+.calendar-theme .fc .fc-event .fc-event-main {
+  color: inherit;
+}
 .calendar-theme .fc .fc-event:focus-visible,
-.calendar-theme .fc .fc-more-link:focus-visible { outline: 2px solid rgb(var(--action)); outline-offset: 2px; }
-.calendar-theme .fc .fc-popover { border-color: rgb(var(--slate-300)); background: rgb(var(--surface)); color: rgb(var(--slate-900)); box-shadow: 0 12px 32px rgb(0 0 0 / 18%); }
-.calendar-theme .fc .fc-popover-header { background: rgb(var(--slate-100)); color: rgb(var(--slate-800)); }
+.calendar-theme .fc .fc-more-link:focus-visible {
+  outline: 2px solid rgb(var(--action));
+  outline-offset: 2px;
+}
+.calendar-theme .fc .fc-popover {
+  border-color: rgb(var(--slate-300));
+  background: rgb(var(--surface));
+  color: rgb(var(--slate-900));
+  box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
+}
+.calendar-theme .fc .fc-popover-header {
+  background: rgb(var(--slate-100));
+  color: rgb(var(--slate-800));
+}
 
 /*
  * Theme changes: a slow, gentle cross-fade between the old and new palette.
@@ -413,19 +501,24 @@ html.theme-transitioning .theme-canvas,
 html.theme-transitioning .theme-canvas *,
 html.theme-transitioning .theme-canvas *::before,
 html.theme-transitioning .theme-canvas *::after {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, box-shadow !important;
+  transition-property:
+    color, background-color, border-color, text-decoration-color, fill, stroke, box-shadow !important;
   transition-duration: 600ms !important;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
   html.theme-view-transition::view-transition-old(root),
-  html.theme-view-transition::view-transition-new(root) { animation: none !important; }
+  html.theme-view-transition::view-transition-new(root) {
+    animation: none !important;
+  }
   html.theme-transitioning body,
   html.theme-transitioning .theme-canvas,
   html.theme-transitioning .theme-canvas *,
   html.theme-transitioning .theme-canvas *::before,
-  html.theme-transitioning .theme-canvas *::after { transition-duration: 0.01ms !important; }
+  html.theme-transitioning .theme-canvas *::after {
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @media (max-width: 640px) {

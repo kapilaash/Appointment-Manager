@@ -1,6 +1,23 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { CalendarDays, CalendarPlus, ChevronDown, CircleHelp, ClipboardCheck, Clock3, Crown, GraduationCap, KeyRound, LayoutDashboard, LayoutGrid, LogOut, Palette, Settings, UserCircle, Users } from 'lucide-react';
+import {
+  CalendarDays,
+  CalendarPlus,
+  ChevronDown,
+  CircleHelp,
+  ClipboardCheck,
+  Clock3,
+  Crown,
+  GraduationCap,
+  KeyRound,
+  LayoutDashboard,
+  LayoutGrid,
+  LogOut,
+  Palette,
+  Settings,
+  UserCircle,
+  Users,
+} from 'lucide-react';
 import { useLogoutMutation, useMeQuery } from '../../features/auth/api';
 import { ThemeProvider } from '../../features/appearance/ThemeContext';
 import { LoginPage } from '../../features/auth/LoginPage';
@@ -41,7 +58,7 @@ const instructorLinks = [
 /** The header title for the current page; nested paths use their closest section. */
 function pageTitle(pathname: string, links: { to: string; label: string }[]) {
   const match = links
-    .filter((link) => link.to === '/' ? pathname === '/' : pathname === link.to || pathname.startsWith(`${link.to}/`))
+    .filter((link) => (link.to === '/' ? pathname === '/' : pathname === link.to || pathname.startsWith(`${link.to}/`)))
     .sort((a, b) => b.to.length - a.to.length)[0];
   return match?.label ?? 'Workspace';
 }
@@ -49,10 +66,20 @@ function pageTitle(pathname: string, links: { to: string; label: string }[]) {
 function initials(name: string | undefined, email: string) {
   const source = name?.trim() || email;
   const parts = source.split(/[\s@._-]+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[1]?.[0] ?? '' : '')).toUpperCase() || '?';
+  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? (parts[1]?.[0] ?? '') : '')).toUpperCase() || '?';
 }
 
-function AccountMenu({ name, email, role, onSignOut }: { name: string | undefined; email: string; role: string; onSignOut: () => void }) {
+function AccountMenu({
+  name,
+  email,
+  role,
+  onSignOut,
+}: {
+  name: string | undefined;
+  email: string;
+  role: string;
+  onSignOut: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -83,7 +110,8 @@ function AccountMenu({ name, email, role, onSignOut }: { name: string | undefine
     }
   }
 
-  const itemClass = 'flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 focus:bg-slate-100 focus:outline-none';
+  const itemClass =
+    'flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 focus:bg-slate-100 focus:outline-none';
   return (
     <div ref={containerRef} className="relative" onKeyDown={onKeyDown}>
       <button
@@ -91,25 +119,60 @@ function AccountMenu({ name, email, role, onSignOut }: { name: string | undefine
         type="button"
         onClick={() => setOpen(!open)}
         className="relative grid h-11 w-11 place-items-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 ring-offset-2 ring-offset-surface transition hover:ring-2 hover:ring-indigo-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-        aria-label="Account menu"
+        // Starts with the visible initials so voice-control users can say what they see (WCAG 2.5.3).
+        aria-label={`${initials(name, email)}, account menu`}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls="account-menu"
       >
-        <span aria-hidden="true">{initials(name, email)}</span>
-        <ChevronDown size={14} aria-hidden="true" className={cn('absolute -bottom-0.5 -right-0.5 rounded-full bg-surface p-0.5 transition-transform duration-200', open && 'rotate-180')} />
+        <span>{initials(name, email)}</span>
+        <ChevronDown
+          size={14}
+          aria-hidden="true"
+          className={cn(
+            'absolute -bottom-0.5 -right-0.5 rounded-full bg-surface p-0.5 transition-transform duration-200',
+            open && 'rotate-180',
+          )}
+        />
       </button>
       {open && (
-        <div id="account-menu" role="menu" aria-label="Account" className="ui-enter absolute right-0 top-[3.25rem] z-30 w-64 rounded-xl border border-slate-200 bg-surface p-1.5 shadow-lifted">
+        <div
+          id="account-menu"
+          role="menu"
+          aria-label="Account"
+          className="ui-enter absolute right-0 top-[3.25rem] z-30 w-64 rounded-xl border border-slate-200 bg-surface p-1.5 shadow-lifted"
+        >
           <div className="border-b border-slate-100 px-3 pb-2.5 pt-2">
             <p className="truncate text-sm font-semibold text-slate-900">{name || email}</p>
-            <p className="truncate text-xs text-slate-500">{email} · <span className="capitalize">{role === 'instructor' ? 'coach' : role}</span></p>
+            <p className="truncate text-xs text-slate-500">
+              {email} · <span className="capitalize">{role === 'instructor' ? 'coach' : role}</span>
+            </p>
           </div>
           <div className="pt-1.5">
-            <Link role="menuitem" to="/profile" onClick={() => setOpen(false)} className={itemClass}><UserCircle size={16} aria-hidden="true" />My profile</Link>
-            <Link role="menuitem" to="/profile#security" onClick={() => setOpen(false)} className={itemClass}><KeyRound size={16} aria-hidden="true" />Password & security</Link>
-            <Link role="menuitem" to="/settings" onClick={() => setOpen(false)} className={itemClass}><Palette size={16} aria-hidden="true" />Appearance & settings</Link>
-            <button role="menuitem" type="button" onClick={() => { setOpen(false); onSignOut(); }} className={cn(itemClass, 'text-rose-700 hover:bg-rose-50 hover:text-rose-800 focus:bg-rose-50')}><LogOut size={16} aria-hidden="true" />Sign out</button>
+            <Link role="menuitem" to="/profile" onClick={() => setOpen(false)} className={itemClass}>
+              <UserCircle size={16} aria-hidden="true" />
+              My profile
+            </Link>
+            <Link role="menuitem" to="/profile#security" onClick={() => setOpen(false)} className={itemClass}>
+              <KeyRound size={16} aria-hidden="true" />
+              Password & security
+            </Link>
+            <Link role="menuitem" to="/settings" onClick={() => setOpen(false)} className={itemClass}>
+              <Palette size={16} aria-hidden="true" />
+              Appearance & settings
+            </Link>
+            <button
+              role="menuitem"
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onSignOut();
+              }}
+              className={cn(itemClass, 'text-rose-700 hover:bg-rose-50 hover:text-rose-800 focus:bg-rose-50')}
+            >
+              <LogOut size={16} aria-hidden="true" />
+              Sign out
+            </button>
           </div>
         </div>
       )}
@@ -121,7 +184,13 @@ export function App() {
   const auth = useMeQuery();
   const [logout] = useLogoutMutation();
   // Admins see how many coach requests await review; coaches see their own waiting requests.
-  const pendingCount = usePendingChangeRequestCountQuery(undefined, { skip: !auth.data, pollingInterval: 60_000, skipPollingIfUnfocused: true, refetchOnFocus: true }).data?.pending ?? 0;
+  const pendingCount =
+    usePendingChangeRequestCountQuery(undefined, {
+      skip: !auth.data,
+      pollingInterval: 60_000,
+      skipPollingIfUnfocused: true,
+      refetchOnFocus: true,
+    }).data?.pending ?? 0;
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -135,17 +204,27 @@ export function App() {
     }
   }
 
-  if (auth.isLoading) return <div role="status" aria-label="Loading your workspace" className="min-h-screen bg-slate-50 p-6 lg:pl-72"><PageSkeleton /></div>;
+  if (auth.isLoading)
+    return (
+      <div role="status" aria-label="Loading your workspace" className="min-h-screen bg-slate-50 p-6 lg:pl-72">
+        <PageSkeleton />
+      </div>
+    );
   if (!auth.data) {
-    const errorStatus = auth.error && typeof auth.error === 'object' && 'status' in auth.error
-      ? auth.error.status
-      : undefined;
+    const errorStatus =
+      auth.error && typeof auth.error === 'object' && 'status' in auth.error ? auth.error.status : undefined;
     if (!auth.isError || errorStatus === 401 || errorStatus === 403) return <LoginPage />;
     return (
       <main className="grid min-h-screen place-items-center bg-slate-50 px-4">
-        <section role="alert" className="w-full max-w-md rounded-2xl border border-slate-200 bg-surface p-6 text-center shadow-sm">
+        <section
+          role="alert"
+          className="w-full max-w-md rounded-2xl border border-slate-200 bg-surface p-6 text-center shadow-sm"
+        >
           <h1 className="text-lg font-semibold text-heading">Workspace temporarily unavailable</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">We couldn’t connect to the academy service. Check your connection, then retry. Your sign-in details are still safe.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            We couldn’t connect to the academy service. Check your connection, then retry. Your sign-in details are
+            still safe.
+          </p>
           <Button className="mt-5 w-full sm:w-auto" onClick={() => void auth.refetch()} disabled={auth.isFetching}>
             {auth.isFetching ? 'Reconnecting…' : 'Retry connection'}
           </Button>
@@ -156,8 +235,10 @@ export function App() {
 
   const user = auth.data;
   const requestsPath = user.role === 'admin' ? '/requests' : '/my-requests';
-  const links = (user.role === 'admin' ? adminLinks : instructorLinks)
-    .map((link) => ({ ...link, badge: link.to === requestsPath ? pendingCount : 0 }));
+  const links = (user.role === 'admin' ? adminLinks : instructorLinks).map((link) => ({
+    ...link,
+    badge: link.to === requestsPath ? pendingCount : 0,
+  }));
   const title = pageTitle(location.pathname, links);
 
   return (
@@ -165,11 +246,22 @@ export function App() {
       <ToastProvider>
         <div className="theme-canvas min-h-screen bg-slate-50">
           <OfflineBanner />
-          <a href="#main-content" className="sr-only z-50 rounded-md bg-surface p-3 text-indigo-700 focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:shadow-lg">Skip to main content</a>
+          <a
+            href="#main-content"
+            className="sr-only z-50 rounded-md bg-surface p-3 text-indigo-700 focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:shadow-lg"
+          >
+            Skip to main content
+          </a>
           <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col overflow-y-auto border-r border-slate-200 bg-surface lg:flex">
             <Link to="/" className="flex h-[76px] items-center gap-3 border-b border-slate-100 px-6">
-              <span className="theme-brand-mark grid h-10 w-10 place-items-center rounded-xl bg-action text-on-action shadow-sm"><Crown size={19} /></span>
-              <span className="text-sm font-semibold leading-tight text-slate-900">Thirumal Chess<br />Academy</span>
+              <span className="theme-brand-mark grid h-10 w-10 place-items-center rounded-xl bg-action text-on-action shadow-sm">
+                <Crown size={19} />
+              </span>
+              <span className="text-sm font-semibold leading-tight text-slate-900">
+                Thirumal Chess
+                <br />
+                Academy
+              </span>
             </Link>
             <div className="px-4 pt-7">
               <p className="px-3 text-[11px] font-semibold uppercase tracking-[.15em] text-slate-400">Workspace</p>
@@ -179,17 +271,38 @@ export function App() {
                     key={to}
                     to={to}
                     end={to === '/'}
-                    className={({ isActive }) => cn(
-                      'group relative flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600',
-                      isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
-                    )}
+                    className={({ isActive }) =>
+                      cn(
+                        'group relative flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600',
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-700'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+                      )
+                    }
                   >
                     {({ isActive }) => (
                       <>
-                        <span aria-hidden="true" className={cn('absolute inset-y-2 left-0 w-1 rounded-full bg-action transition-all duration-300', isActive ? 'opacity-100' : 'scale-y-0 opacity-0')} />
-                        <Icon size={18} strokeWidth={1.8} className="transition-transform duration-150 group-hover:scale-110 motion-reduce:transform-none" />
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            'absolute inset-y-2 left-0 w-1 rounded-full bg-action transition-all duration-300',
+                            isActive ? 'opacity-100' : 'scale-y-0 opacity-0',
+                          )}
+                        />
+                        <Icon
+                          size={18}
+                          strokeWidth={1.8}
+                          className="transition-transform duration-150 group-hover:scale-110 motion-reduce:transform-none"
+                        />
                         {label}
-                        {badge > 0 && <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900" aria-label={`${badge} waiting`}>{badge}</span>}
+                        {badge > 0 && (
+                          <span
+                            className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900"
+                            aria-label={`${badge} waiting`}
+                          >
+                            {badge}
+                          </span>
+                        )}
                       </>
                     )}
                   </NavLink>
@@ -198,8 +311,17 @@ export function App() {
             </div>
             <div className="mt-auto p-4">
               <div className="rounded-xl bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-800"><CircleHelp size={17} className="text-indigo-600" />Need a hand?</div>
-                <p className="mt-1 text-xs leading-5 text-slate-500">Step-by-step <Link to="/help" className="font-medium text-indigo-700 underline-offset-2 hover:underline">workflow guides</Link> are always one click away.</p>
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                  <CircleHelp size={17} className="text-indigo-600" />
+                  Need a hand?
+                </div>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Step-by-step{' '}
+                  <Link to="/help" className="font-medium text-indigo-700 underline-offset-2 hover:underline">
+                    workflow guides
+                  </Link>{' '}
+                  are always one click away.
+                </p>
               </div>
             </div>
           </aside>
@@ -212,13 +334,26 @@ export function App() {
               <div className="flex items-center gap-3">
                 <div className="hidden text-right sm:block">
                   <p className="text-sm font-medium text-slate-800">{user.full_name || user.email}</p>
-                  <p className="text-xs capitalize text-slate-500">{user.role === 'instructor' ? 'Coach' : user.role}</p>
+                  <p className="text-xs capitalize text-slate-500">
+                    {user.role === 'instructor' ? 'Coach' : user.role}
+                  </p>
                 </div>
-                <AccountMenu name={user.full_name} email={user.email} role={user.role} onSignOut={() => void signOut()} />
+                <AccountMenu
+                  name={user.full_name}
+                  email={user.email}
+                  role={user.role}
+                  onSignOut={() => void signOut()}
+                />
               </div>
             </header>
-            <main id="main-content" tabIndex={-1} className="mx-auto max-w-[1440px] px-4 pt-7 pb-28 outline-none sm:px-8 sm:pt-9 lg:pb-9">
-              <div key={location.pathname} className="page-enter"><Outlet /></div>
+            <main
+              id="main-content"
+              tabIndex={-1}
+              className="mx-auto max-w-[1440px] px-4 pb-28 pt-7 outline-none sm:px-8 sm:pt-9 lg:pb-9"
+            >
+              <div key={location.pathname} className="page-enter">
+                <Outlet />
+              </div>
             </main>
           </div>
           <MobileWorkspaceNav links={links} />

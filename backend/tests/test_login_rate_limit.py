@@ -91,18 +91,20 @@ class FakeDatabase:
 
 
 def request_from(ip: str) -> Request:
-    return Request({
-        "type": "http",
-        "http_version": "1.1",
-        "method": "POST",
-        "scheme": "http",
-        "path": "/api/v1/auth/login",
-        "raw_path": b"/api/v1/auth/login",
-        "query_string": b"",
-        "headers": [],
-        "client": (ip, 12345),
-        "server": ("testserver", 80),
-    })
+    return Request(
+        {
+            "type": "http",
+            "http_version": "1.1",
+            "method": "POST",
+            "scheme": "http",
+            "path": "/api/v1/auth/login",
+            "raw_path": b"/api/v1/auth/login",
+            "query_string": b"",
+            "headers": [],
+            "client": (ip, 12345),
+            "server": ("testserver", 80),
+        }
+    )
 
 
 @pytest.mark.asyncio
@@ -145,7 +147,9 @@ async def test_successful_login_can_clear_account_and_ip_counters() -> None:
 
 
 @pytest.mark.asyncio
-async def test_login_route_returns_retry_after_after_repeated_failures(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_login_route_returns_retry_after_after_repeated_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     redis = FakeRedis()
     monkeypatch.setattr(auth_routes, "get_redis_client", lambda: redis)
     payload = LoginRequest(email="coach@example.com", password="wrong-password")
@@ -161,7 +165,9 @@ async def test_login_route_returns_retry_after_after_repeated_failures(monkeypat
 
 
 @pytest.mark.asyncio
-async def test_valid_credentials_can_recover_an_email_limited_account(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_valid_credentials_can_recover_an_email_limited_account(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     redis = FakeRedis()
     for _ in range(LOGIN_EMAIL_FAILURE_LIMIT):
         await record_login_failure(redis, "192.0.2.3", "coach@example.com")
@@ -201,7 +207,9 @@ async def test_valid_credentials_can_recover_an_email_limited_account(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_password_work_sheds_load_when_bounded_queue_is_full(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_password_work_sheds_load_when_bounded_queue_is_full(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(auth_routes, "_password_work_slots", threading.Semaphore(0))
 
     with pytest.raises(HTTPException) as error:

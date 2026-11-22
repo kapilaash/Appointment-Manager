@@ -69,9 +69,11 @@ def downgrade() -> None:
     connection = op.get_bind()
     op.add_column("students", sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True))
     op.drop_constraint("fk_appointments_student_id_students", "appointments", type_="foreignkey")
-    null_appointments = connection.execute(
-        sa.text("SELECT id FROM appointments WHERE student_id IS NULL")
-    ).scalars().all()
+    null_appointments = (
+        connection.execute(sa.text("SELECT id FROM appointments WHERE student_id IS NULL"))
+        .scalars()
+        .all()
+    )
     for appointment_id in null_appointments:
         student_id = uuid4()
         connection.execute(

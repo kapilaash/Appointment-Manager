@@ -15,10 +15,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.add_column("instructors", sa.Column("meeting_url", sa.Text(), nullable=True))
     op.add_column("students", sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True))
-    op.execute(
-        "UPDATE students SET deleted_at = now() "
-        "WHERE email LIKE '%@privacy.invalid'"
-    )
+    op.execute("UPDATE students SET deleted_at = now() WHERE email LIKE '%@privacy.invalid'")
 
 
 def downgrade() -> None:

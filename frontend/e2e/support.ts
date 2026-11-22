@@ -26,12 +26,20 @@ export async function csrfHeaders(context: BrowserContext) {
 }
 
 export async function api<T>(
-  request: APIRequestContext, context: BrowserContext, method: 'GET' | 'POST' | 'PUT' | 'PATCH', url: string,
-  data?: unknown, extraHeaders: Record<string, string> = {},
+  request: APIRequestContext,
+  context: BrowserContext,
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH',
+  url: string,
+  data?: unknown,
+  extraHeaders: Record<string, string> = {},
 ): Promise<T> {
-  const response = await request.fetch(url, { method, data, headers: { ...(method === 'GET' ? {} : await csrfHeaders(context)), ...extraHeaders } });
+  const response = await request.fetch(url, {
+    method,
+    data,
+    headers: { ...(method === 'GET' ? {} : await csrfHeaders(context)), ...extraHeaders },
+  });
   expect(response.ok(), `${method} ${url} → ${response.status()} ${await response.text()}`).toBeTruthy();
-  return response.status() === 204 ? (undefined as T) : (await response.json() as T);
+  return response.status() === 204 ? (undefined as T) : ((await response.json()) as T);
 }
 
 type MailSummary = { ID: string; Subject: string; Created: string };
@@ -47,27 +55,56 @@ export async function mailText(request: APIRequestContext, id: string): Promise<
   return ((await response.json()) as { Text: string }).Text;
 }
 
-export const isoDate = (offsetDays: number) => new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
+export const isoDate = (offsetDays: number) =>
+  new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
 
 /** Create a coach through the admin API (invitation + registration). Returns ids for cleanup. */
-export async function createCoach(admin: Page, adminContext: BrowserContext, coachContext: BrowserContext, email: string, name: string, password: string) {
-  const invite = await api<{ registration_url: string }>(admin.request, adminContext, 'POST', '/api/v1/admin/coaches/invitations', { email });
+export async function createCoach(
+  admin: Page,
+  adminContext: BrowserContext,
+  coachContext: BrowserContext,
+  email: string,
+  name: string,
+  password: string,
+) {
+  const invite = await api<{ registration_url: string }>(
+    admin.request,
+    adminContext,
+    'POST',
+    '/api/v1/admin/coaches/invitations',
+    { email },
+  );
   // The token travels in the URL fragment so it never reaches server logs or referrers.
   const token = new URLSearchParams(new URL(invite.registration_url).hash.slice(1)).get('token') ?? '';
-  const registered = await api<{ id: string }>(coachContext.request, coachContext, 'POST', '/api/v1/auth/coach-register', {
-    token, full_name: name, display_name: name, country_code: 'US', timezone: 'America/New_York', password,
-  });
+  const registered = await api<{ id: string }>(
+    coachContext.request,
+    coachContext,
+    'POST',
+    '/api/v1/auth/coach-register',
+    {
+      token,
+      full_name: name,
+      display_name: name,
+      country_code: 'US',
+      timezone: 'America/New_York',
+      password,
+    },
+  );
   return registered.id;
 }
 
 export async function deactivateUser(admin: Page, adminContext: BrowserContext, userId: string) {
-  await admin.request.patch(`/api/v1/admin/coaches/${userId}/active`, { data: { active: false }, headers: await csrfHeaders(adminContext) });
+  await admin.request.patch(`/api/v1/admin/coaches/${userId}/active`, {
+    data: { active: false },
+    headers: await csrfHeaders(adminContext),
+  });
 }
 
 function base32Decode(input: string): Buffer {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
   let bits = '';
-  for (const character of input.replace(/[\s=]/g, '').toUpperCase()) bits += alphabet.indexOf(character).toString(2).padStart(5, '0');
+  for (const character of input.replace(/[\s=]/g, '').toUpperCase())
+    bits += alphabet.indexOf(character).toString(2).padStart(5, '0');
   const bytes = bits.match(/.{8}/g) ?? [];
   return Buffer.from(bytes.map((byte) => parseInt(byte, 2)));
 }

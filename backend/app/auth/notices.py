@@ -28,10 +28,15 @@ BODIES = {
 
 def queue_account_notice(db: AsyncSession, user: User, event_type: str) -> None:
     """Stage a security email in the same transaction as the change it reports."""
-    db.add(OutboxEvent(
-        event_type=event_type, aggregate_id=user.id, payload={"user_id": str(user.id)},
-        processing_status="pending", attempt_count=0,
-    ))
+    db.add(
+        OutboxEvent(
+            event_type=event_type,
+            aggregate_id=user.id,
+            payload={"user_id": str(user.id)},
+            processing_status="pending",
+            attempt_count=0,
+        )
+    )
 
 
 def account_notice_email(event_type: str, *, name: str, reset_url: str) -> tuple[str, str]:

@@ -83,7 +83,14 @@ app.add_middleware(
     allow_origins=[str(origin).rstrip("/") for origin in settings.CORS_ORIGINS],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "X-CSRF-Token", "X-Request-ID", "Idempotency-Key", "sentry-trace", "baggage"],
+    allow_headers=[
+        "Content-Type",
+        "X-CSRF-Token",
+        "X-Request-ID",
+        "Idempotency-Key",
+        "sentry-trace",
+        "baggage",
+    ],
     expose_headers=["X-CSRF-Token", "X-Request-ID"],
 )
 
@@ -125,5 +132,5 @@ async def health_ready() -> dict[str, str]:
 async def root_api():
     return {
         "message": "Welcome to Chess Academy API v1",
-        "docs": "/docs" if settings.ENVIRONMENT != "production" else "disabled"
+        "docs": "/docs" if settings.ENVIRONMENT != "production" else "disabled",
     }

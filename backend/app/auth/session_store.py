@@ -68,7 +68,9 @@ class SessionStore:
         await redis.delete(f"{cls.CSRF_PREFIX}{session_id}")
 
     @classmethod
-    async def destroy_user_sessions(cls, user_id: uuid.UUID, *, keep_session_id: str | None = None) -> None:
+    async def destroy_user_sessions(
+        cls, user_id: uuid.UUID, *, keep_session_id: str | None = None
+    ) -> None:
         """Revoke a user's sessions (password change/reset, deactivation), optionally keeping the current one."""
         redis = get_redis_client()
         async for key in redis.scan_iter(match=f"{cls.PREFIX}*"):

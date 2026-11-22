@@ -31,7 +31,9 @@ def upgrade() -> None:
     op.add_column("users", sa.Column("mfa_recovery_code_hashes", postgresql.JSONB()))
     op.add_column("users", sa.Column("password_changed_at", sa.DateTime(timezone=True)))
 
-    op.drop_constraint(op.f("ck_account_tokens_account_token_purpose"), "account_tokens", type_="check")
+    op.drop_constraint(
+        op.f("ck_account_tokens_account_token_purpose"), "account_tokens", type_="check"
+    )
     op.create_check_constraint(
         op.f("ck_account_tokens_account_token_purpose"),
         "account_tokens",
@@ -40,10 +42,19 @@ def upgrade() -> None:
 
     op.add_column("notification_events", sa.Column("user_id", postgresql.UUID(as_uuid=True)))
     op.create_foreign_key(
-        "fk_notification_events_user_id_users", "notification_events", "users", ["user_id"], ["id"], ondelete="CASCADE"
+        "fk_notification_events_user_id_users",
+        "notification_events",
+        "users",
+        ["user_id"],
+        ["id"],
+        ondelete="CASCADE",
     )
     op.create_index("ix_notification_events_user_id", "notification_events", ["user_id"])
-    op.drop_constraint(op.f("ck_notification_events_ck_notification_events_subject"), "notification_events", type_="check")
+    op.drop_constraint(
+        op.f("ck_notification_events_ck_notification_events_subject"),
+        "notification_events",
+        type_="check",
+    )
     op.create_check_constraint(
         op.f("ck_notification_events_subject"),
         "notification_events",
@@ -60,13 +71,19 @@ def downgrade() -> None:
         "(appointment_id IS NULL) <> (change_request_id IS NULL)",
     )
     op.drop_index("ix_notification_events_user_id", table_name="notification_events")
-    op.drop_constraint("fk_notification_events_user_id_users", "notification_events", type_="foreignkey")
+    op.drop_constraint(
+        "fk_notification_events_user_id_users", "notification_events", type_="foreignkey"
+    )
     op.drop_column("notification_events", "user_id")
 
     op.execute("DELETE FROM account_tokens WHERE purpose = 'password_reset'")
-    op.drop_constraint(op.f("ck_account_tokens_account_token_purpose"), "account_tokens", type_="check")
+    op.drop_constraint(
+        op.f("ck_account_tokens_account_token_purpose"), "account_tokens", type_="check"
+    )
     op.create_check_constraint(
-        op.f("ck_account_tokens_account_token_purpose"), "account_tokens", "purpose in ('coach_invitation', 'coach_password_reset')"
+        op.f("ck_account_tokens_account_token_purpose"),
+        "account_tokens",
+        "purpose in ('coach_invitation', 'coach_password_reset')",
     )
 
     op.drop_column("users", "password_changed_at")

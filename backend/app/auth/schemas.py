@@ -22,10 +22,11 @@ class PasswordResetRequestIn(BaseModel):
     email: EmailStr
 
 
-
 class MfaLoginIn(BaseModel):
     mfa_token: str = Field(min_length=20, max_length=200)
-    code: str = Field(min_length=6, max_length=32, description="Authenticator code or a recovery code")
+    code: str = Field(
+        min_length=6, max_length=32, description="Authenticator code or a recovery code"
+    )
 
 
 class MfaChallengeOut(BaseModel):
@@ -77,7 +78,6 @@ class PasswordResetIn(CoachInvitationTokenIn):
         return require_strong_password(value)
 
 
-
 class PasswordChangeIn(BaseModel):
     current_password: str = Field(min_length=1, max_length=128)
     new_password: str = Field(min_length=12, max_length=128)
@@ -94,7 +94,9 @@ class MfaCodeIn(BaseModel):
 
 class MfaDisableIn(BaseModel):
     password: str = Field(min_length=1, max_length=128)
-    code: str = Field(min_length=6, max_length=32, description="Authenticator code or a recovery code")
+    code: str = Field(
+        min_length=6, max_length=32, description="Authenticator code or a recovery code"
+    )
 
 
 class PasswordConfirmIn(BaseModel):

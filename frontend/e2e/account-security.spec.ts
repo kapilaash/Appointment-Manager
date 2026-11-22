@@ -1,7 +1,19 @@
 import { expect, test } from '@playwright/test';
-import { adminEmail, adminPassword, createCoach, deactivateUser, mailText, mailTo, signIn, signOut, totp } from './support';
+import {
+  adminEmail,
+  adminPassword,
+  createCoach,
+  deactivateUser,
+  mailText,
+  mailTo,
+  signIn,
+  signOut,
+  totp,
+} from './support';
 
-test('a user can change their password, turn on two-step sign-in, and recover a forgotten password by email', async ({ browser }) => {
+test('a user can change their password, turn on two-step sign-in, and recover a forgotten password by email', async ({
+  browser,
+}) => {
   test.setTimeout(240_000);
   const unique = Date.now();
   const email = `security-coach-${unique}@example.com`;
@@ -66,10 +78,16 @@ test('a user can change their password, turn on two-step sign-in, and recover a 
     await page.getByLabel('Account email').fill(email);
     await page.getByRole('button', { name: 'Send reset link' }).click();
     await expect(page.getByRole('status')).toContainText('password reset instructions will be sent');
-    await expect.poll(async () => (await mailTo(page.request, email)).length, { timeout: 30_000 }).toBeGreaterThan(before);
-    const resetMail = (await mailTo(page.request, email)).find((message) => message.Subject === 'Reset your Thirumal Chess Academy password');
+    await expect
+      .poll(async () => (await mailTo(page.request, email)).length, { timeout: 30_000 })
+      .toBeGreaterThan(before);
+    const resetMail = (await mailTo(page.request, email)).find(
+      (message) => message.Subject === 'Reset your Thirumal Chess Academy password',
+    );
     expect(resetMail).toBeTruthy();
-    const link = (await mailText(page.request, resetMail!.ID)).match(/https?:\/\/\S+\/reset-password#token=[\w-]+/)?.[0];
+    const link = (await mailText(page.request, resetMail!.ID)).match(
+      /https?:\/\/\S+\/reset-password#token=[\w-]+/,
+    )?.[0];
     expect(link).toBeTruthy();
     await page.goto(new URL(link!).pathname + new URL(link!).hash);
     await page.getByLabel('New password', { exact: true }).fill(thirdPassword);
@@ -83,11 +101,14 @@ test('a user can change their password, turn on two-step sign-in, and recover a 
     await expect(page.getByText('Academy workspace')).toBeVisible();
 
     // Security notices were emailed for every change.
-    await expect.poll(async () => (await mailTo(page.request, email)).map((message) => message.Subject), { timeout: 45_000 })
-      .toEqual(expect.arrayContaining([
-        'Your Thirumal Chess Academy password was changed',
-        'Two-step sign-in is now on for your account',
-      ]));
+    await expect
+      .poll(async () => (await mailTo(page.request, email)).map((message) => message.Subject), { timeout: 45_000 })
+      .toEqual(
+        expect.arrayContaining([
+          'Your Thirumal Chess Academy password was changed',
+          'Two-step sign-in is now on for your account',
+        ]),
+      );
   } finally {
     await deactivateUser(admin, adminContext, userId);
     await coachContext.close();

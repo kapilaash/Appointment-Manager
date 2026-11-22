@@ -44,18 +44,41 @@ def upgrade() -> None:
     )
     op.create_index("ix_change_requests_id", "change_requests", ["id"])
     op.create_index("ix_change_requests_instructor_id", "change_requests", ["instructor_id"])
-    op.create_index("ix_change_requests_status_created", "change_requests", ["status", "created_at"])
+    op.create_index(
+        "ix_change_requests_status_created", "change_requests", ["status", "created_at"]
+    )
     pending_indexes = {
-        "uq_change_requests_pending_weekly": ("instructor_id", "status = 'pending' AND request_type = 'weekly_availability'"),
-        "uq_change_requests_pending_timezone": ("instructor_id", "status = 'pending' AND request_type = 'timezone_change'"),
-        "uq_change_requests_pending_appointment": ("appointment_id", "status = 'pending' AND appointment_id IS NOT NULL"),
-        "uq_change_requests_pending_exception_remove": ("exception_id", "status = 'pending' AND request_type = 'exception_remove'"),
+        "uq_change_requests_pending_weekly": (
+            "instructor_id",
+            "status = 'pending' AND request_type = 'weekly_availability'",
+        ),
+        "uq_change_requests_pending_timezone": (
+            "instructor_id",
+            "status = 'pending' AND request_type = 'timezone_change'",
+        ),
+        "uq_change_requests_pending_appointment": (
+            "appointment_id",
+            "status = 'pending' AND appointment_id IS NOT NULL",
+        ),
+        "uq_change_requests_pending_exception_remove": (
+            "exception_id",
+            "status = 'pending' AND request_type = 'exception_remove'",
+        ),
     }
     for name, (column, where) in pending_indexes.items():
-        op.create_index(name, "change_requests", [column], unique=True, postgresql_where=sa.text(where))
+        op.create_index(
+            name, "change_requests", [column], unique=True, postgresql_where=sa.text(where)
+        )
 
-    op.alter_column("notification_events", "appointment_id", existing_type=postgresql.UUID(as_uuid=True), nullable=True)
-    op.add_column("notification_events", sa.Column("change_request_id", postgresql.UUID(as_uuid=True)))
+    op.alter_column(
+        "notification_events",
+        "appointment_id",
+        existing_type=postgresql.UUID(as_uuid=True),
+        nullable=True,
+    )
+    op.add_column(
+        "notification_events", sa.Column("change_request_id", postgresql.UUID(as_uuid=True))
+    )
     op.create_foreign_key(
         "fk_notification_events_change_request_id_change_requests",
         "notification_events",
@@ -64,7 +87,9 @@ def upgrade() -> None:
         ["id"],
         ondelete="CASCADE",
     )
-    op.create_index("ix_notification_events_change_request_id", "notification_events", ["change_request_id"])
+    op.create_index(
+        "ix_notification_events_change_request_id", "notification_events", ["change_request_id"]
+    )
     op.create_check_constraint(
         "ck_notification_events_subject",
         "notification_events",
@@ -72,7 +97,12 @@ def upgrade() -> None:
     )
     # event_key is the outbox event id, so it is already unique per message batch.
     op.drop_index("uq_notification_event_recipient", table_name="notification_events")
-    op.create_index("uq_notification_event_recipient", "notification_events", ["event_key", "recipient"], unique=True)
+    op.create_index(
+        "uq_notification_event_recipient",
+        "notification_events",
+        ["event_key", "recipient"],
+        unique=True,
+    )
 
 
 def downgrade() -> None:
@@ -86,7 +116,16 @@ def downgrade() -> None:
     )
     op.drop_constraint("ck_notification_events_subject", "notification_events", type_="check")
     op.drop_index("ix_notification_events_change_request_id", table_name="notification_events")
-    op.drop_constraint("fk_notification_events_change_request_id_change_requests", "notification_events", type_="foreignkey")
+    op.drop_constraint(
+        "fk_notification_events_change_request_id_change_requests",
+        "notification_events",
+        type_="foreignkey",
+    )
     op.drop_column("notification_events", "change_request_id")
-    op.alter_column("notification_events", "appointment_id", existing_type=postgresql.UUID(as_uuid=True), nullable=False)
+    op.alter_column(
+        "notification_events",
+        "appointment_id",
+        existing_type=postgresql.UUID(as_uuid=True),
+        nullable=False,
+    )
     op.drop_table("change_requests")

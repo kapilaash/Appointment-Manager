@@ -12,9 +12,7 @@ export function formatLoginError(error: unknown): string {
         if (!item || typeof item !== 'object') return String(item);
         const issue = item as Record<string, unknown>;
         const message = typeof issue.msg === 'string' ? issue.msg : 'Invalid value';
-        const location = Array.isArray(issue.loc)
-          ? issue.loc.filter((part) => part !== 'body').join(' → ')
-          : '';
+        const location = Array.isArray(issue.loc) ? issue.loc.filter((part) => part !== 'body').join(' → ') : '';
         return location ? `${location}: ${message}` : message;
       });
       if (messages.length) return messages.join('. ');
@@ -25,7 +23,8 @@ export function formatLoginError(error: unknown): string {
     }
   }
 
-  if (value.status === 'FETCH_ERROR') return 'Could not reach the sign-in service. Check that the app is running and try again.';
+  if (value.status === 'FETCH_ERROR')
+    return 'Could not reach the sign-in service. Check that the app is running and try again.';
   if (value.status === 'PARSING_ERROR') return 'The sign-in service returned an unreadable response. Please try again.';
   if (typeof value.error === 'string') return value.error;
   if (typeof value.message === 'string') return value.message;

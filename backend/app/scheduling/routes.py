@@ -211,17 +211,21 @@ async def _instructor(db: AsyncSession, user: User, instructor_id: UUID) -> Inst
 
 
 def _queue_appointment_search_sync(db: AsyncSession, appointment_id: UUID) -> None:
-    db.add(OutboxEvent(
-        event_type=SEARCH_EVENT_TYPE,
-        aggregate_id=appointment_id,
-        payload={"appointment_id": str(appointment_id)},
-        processing_status="pending",
-        attempt_count=0,
-    ))
+    db.add(
+        OutboxEvent(
+            event_type=SEARCH_EVENT_TYPE,
+            aggregate_id=appointment_id,
+            payload={"appointment_id": str(appointment_id)},
+            processing_status="pending",
+            attempt_count=0,
+        )
+    )
 
 
 async def _queue_coach_search_sync(db: AsyncSession, instructor_id: UUID) -> None:
-    appointment_ids = await db.scalars(select(Appointment.id).where(Appointment.instructor_id == instructor_id))
+    appointment_ids = await db.scalars(
+        select(Appointment.id).where(Appointment.instructor_id == instructor_id)
+    )
     for appointment_id in appointment_ids:
         _queue_appointment_search_sync(db, appointment_id)
 
@@ -243,18 +247,36 @@ async def _slots(
     zone = ZoneInfo(coach.timezone)
     from_utc = datetime.combine(first, time.min, zone).astimezone(UTC)
     until_utc = datetime.combine(last + timedelta(days=1), time.min, zone).astimezone(UTC)
-    rules = list((await db.scalars(select(AvailabilityRule).where(AvailabilityRule.instructor_id == coach.id))).all())
-    exceptions = list((await db.scalars(select(AvailabilityException).where(
-        AvailabilityException.instructor_id == coach.id,
-        AvailabilityException.exception_date.between(first, last),
-    ))).all())
-    busy_rows = list((await db.scalars(select(Appointment).where(
-        Appointment.instructor_id == coach.id,
-        Appointment.status == "confirmed",
-        Appointment.occupied_from < until_utc,
-        Appointment.occupied_until > from_utc,
-        *([Appointment.id != exclude_appointment_id] if exclude_appointment_id else []),
-    ))).all())
+    rules = list(
+        (
+            await db.scalars(
+                select(AvailabilityRule).where(AvailabilityRule.instructor_id == coach.id)
+            )
+        ).all()
+    )
+    exceptions = list(
+        (
+            await db.scalars(
+                select(AvailabilityException).where(
+                    AvailabilityException.instructor_id == coach.id,
+                    AvailabilityException.exception_date.between(first, last),
+                )
+            )
+        ).all()
+    )
+    busy_rows = list(
+        (
+            await db.scalars(
+                select(Appointment).where(
+                    Appointment.instructor_id == coach.id,
+                    Appointment.status == "confirmed",
+                    Appointment.occupied_from < until_utc,
+                    Appointment.occupied_until > from_utc,
+                    *([Appointment.id != exclude_appointment_id] if exclude_appointment_id else []),
+                )
+            )
+        ).all()
+    )
     busy = [Interval(row.occupied_from, row.occupied_until) for row in busy_rows]
     try:
         slots = generate_slots(
@@ -314,12 +336,13 @@ def _appointment_snapshot(appointment: Appointment) -> dict:
 # These functions stage changes on the session and never commit, so the caller
 # decides the transaction boundary.
 
+
 def validate_rules(rules: list[RuleIn]) -> list[RuleIn]:
     ordered = sorted(rules, key=lambda r: (r.day_of_week, r.start_local_time))
     for i, current in enumerate(ordered):
         if current.start_local_time >= current.end_local_time:
             raise HTTPException(422, "End time must be later than start time")
-        for other in ordered[i + 1:]:
+        for other in ordered[i + 1 :]:
             if other.day_of_week != current.day_of_week:
                 break
             if other.start_local_time < current.end_local_time:
@@ -331,17 +354,30 @@ async def apply_weekly_rules(db: AsyncSession, coach: Instructor, rules: list[Ru
     """Replace the coach's weekly rules and return confirmed bookings now outside them."""
     rules = validate_rules(rules)
     now = datetime.now(UTC)
-    future = (await db.scalars(select(Appointment).where(
-        Appointment.instructor_id == coach.id,
-        Appointment.status == "confirmed",
-        Appointment.ends_at >= now,
-    ))).all()
-    existing_exceptions = list((await db.scalars(select(AvailabilityException).where(AvailabilityException.instructor_id == coach.id))).all())
+    future = (
+        await db.scalars(
+            select(Appointment).where(
+                Appointment.instructor_id == coach.id,
+                Appointment.status == "confirmed",
+                Appointment.ends_at >= now,
+            )
+        )
+    ).all()
+    existing_exceptions = list(
+        (
+            await db.scalars(
+                select(AvailabilityException).where(AvailabilityException.instructor_id == coach.id)
+            )
+        ).all()
+    )
     affected = []
     for appointment in future:
         local_day = appointment.starts_at.astimezone(ZoneInfo(coach.timezone)).date()
         windows = actual_windows(local_day, coach.timezone, rules, existing_exceptions)  # type: ignore[arg-type]
-        if not any(w.start <= appointment.occupied_from and appointment.occupied_until <= w.end for w in windows):
+        if not any(
+            w.start <= appointment.occupied_from and appointment.occupied_until <= w.end
+            for w in windows
+        ):
             affected.append(str(appointment.id))
     await db.execute(delete(AvailabilityRule).where(AvailabilityRule.instructor_id == coach.id))
     db.add_all([AvailabilityRule(instructor_id=coach.id, **rule.model_dump()) for rule in rules])
@@ -353,11 +389,17 @@ def validate_exception(data: ExceptionIn) -> None:
         raise HTTPException(422, "Invalid exception type")
     if (data.start_local_time is None) != (data.end_local_time is None):
         raise HTTPException(422, "Provide both local times or leave both blank for all day")
-    if data.start_local_time is not None and data.end_local_time is not None and data.start_local_time >= data.end_local_time:
+    if (
+        data.start_local_time is not None
+        and data.end_local_time is not None
+        and data.start_local_time >= data.end_local_time
+    ):
         raise HTTPException(422, "End time must be later than start time")
 
 
-async def apply_exception_add(db: AsyncSession, coach: Instructor, data: ExceptionIn) -> tuple[AvailabilityException, list[str]]:
+async def apply_exception_add(
+    db: AsyncSession, coach: Instructor, data: ExceptionIn
+) -> tuple[AvailabilityException, list[str]]:
     validate_exception(data)
     item = AvailabilityException(instructor_id=coach.id, **data.model_dump())
     db.add(item)
@@ -365,17 +407,29 @@ async def apply_exception_add(db: AsyncSession, coach: Instructor, data: Excepti
     if data.exception_type == "unavailable":
         local_zone = ZoneInfo(coach.timezone)
         if data.start_local_time is None or data.end_local_time is None:
-            block_start = datetime.combine(data.exception_date, time.min, local_zone).astimezone(UTC)
-            block_end = datetime.combine(data.exception_date + timedelta(days=1), time.min, local_zone).astimezone(UTC)
+            block_start = datetime.combine(data.exception_date, time.min, local_zone).astimezone(
+                UTC
+            )
+            block_end = datetime.combine(
+                data.exception_date + timedelta(days=1), time.min, local_zone
+            ).astimezone(UTC)
         else:
-            block_start = datetime.combine(data.exception_date, data.start_local_time, local_zone).astimezone(UTC)
-            block_end = datetime.combine(data.exception_date, data.end_local_time, local_zone).astimezone(UTC)
-        rows = (await db.scalars(select(Appointment).where(
-            Appointment.instructor_id == coach.id,
-            Appointment.status == "confirmed",
-            Appointment.occupied_from < block_end,
-            Appointment.occupied_until > block_start,
-        ))).all()
+            block_start = datetime.combine(
+                data.exception_date, data.start_local_time, local_zone
+            ).astimezone(UTC)
+            block_end = datetime.combine(
+                data.exception_date, data.end_local_time, local_zone
+            ).astimezone(UTC)
+        rows = (
+            await db.scalars(
+                select(Appointment).where(
+                    Appointment.instructor_id == coach.id,
+                    Appointment.status == "confirmed",
+                    Appointment.occupied_from < block_end,
+                    Appointment.occupied_until > block_start,
+                )
+            )
+        ).all()
         affected = [str(row.id) for row in rows]
     return item, affected
 
@@ -390,14 +444,25 @@ async def _supersede_pending(db: AsyncSession, *conditions: Any) -> None:
 
 
 async def apply_exception_remove(db: AsyncSession, coach: Instructor, exception_id: UUID) -> None:
-    item = await db.scalar(select(AvailabilityException).where(AvailabilityException.id == exception_id, AvailabilityException.instructor_id == coach.id))
+    item = await db.scalar(
+        select(AvailabilityException).where(
+            AvailabilityException.id == exception_id,
+            AvailabilityException.instructor_id == coach.id,
+        )
+    )
     if item is None:
         raise HTTPException(404, "Availability exception not found")
-    await _supersede_pending(db, ChangeRequest.request_type == cr.EXCEPTION_REMOVE, ChangeRequest.exception_id == exception_id)
+    await _supersede_pending(
+        db,
+        ChangeRequest.request_type == cr.EXCEPTION_REMOVE,
+        ChangeRequest.exception_id == exception_id,
+    )
     await db.delete(item)
 
 
-async def apply_timezone_change(db: AsyncSession, coach: Instructor, timezone_name: str, country_code: str | None) -> None:
+async def apply_timezone_change(
+    db: AsyncSession, coach: Instructor, timezone_name: str, country_code: str | None
+) -> None:
     coach.timezone = timezone_name
     coach.country_code = country_code
     await _queue_coach_search_sync(db, coach.id)
@@ -410,18 +475,22 @@ async def apply_cancel(db: AsyncSession, appointment: Appointment, reason: str) 
         raise HTTPException(409, "This appointment can no longer be cancelled")
     appointment.status = "cancelled"
     appointment.cancellation_reason = reason
-    db.add(OutboxEvent(
-        event_type="booking.cancelled",
-        aggregate_id=appointment.id,
-        payload={"appointment_id": str(appointment.id), "reason": reason},
-        processing_status="pending",
-        attempt_count=0,
-    ))
+    db.add(
+        OutboxEvent(
+            event_type="booking.cancelled",
+            aggregate_id=appointment.id,
+            payload={"appointment_id": str(appointment.id), "reason": reason},
+            processing_status="pending",
+            attempt_count=0,
+        )
+    )
     _queue_appointment_search_sync(db, appointment.id)
     await _supersede_pending(db, ChangeRequest.appointment_id == appointment.id)
 
 
-async def validated_reschedule_start(db: AsyncSession, appointment: Appointment, starts_at: datetime) -> tuple[datetime, int]:
+async def validated_reschedule_start(
+    db: AsyncSession, appointment: Appointment, starts_at: datetime
+) -> tuple[datetime, int]:
     """Check that a confirmed appointment can move to starts_at; return the UTC start and duration."""
     if appointment.status != "confirmed":
         raise HTTPException(409, "Only confirmed appointments can be rescheduled")
@@ -438,25 +507,29 @@ async def validated_reschedule_start(db: AsyncSession, appointment: Appointment,
     return start, duration
 
 
-async def apply_reschedule(db: AsyncSession, appointment: Appointment, starts_at: datetime, reason: str) -> None:
+async def apply_reschedule(
+    db: AsyncSession, appointment: Appointment, starts_at: datetime, reason: str
+) -> None:
     start, duration = await validated_reschedule_start(db, appointment, starts_at)
     appointment.starts_at = start
     appointment.ends_at = start + timedelta(minutes=duration)
     appointment.reschedule_reason = reason
     appointment.occupied_from = appointment.starts_at
     appointment.occupied_until = appointment.ends_at
-    db.add(OutboxEvent(
-        event_type="booking.rescheduled",
-        aggregate_id=appointment.id,
-        payload={
-            "appointment_id": str(appointment.id),
-            "reason": reason,
-            "starts_at": start.isoformat(),
-            "ends_at": appointment.ends_at.isoformat(),
-        },
-        processing_status="pending",
-        attempt_count=0,
-    ))
+    db.add(
+        OutboxEvent(
+            event_type="booking.rescheduled",
+            aggregate_id=appointment.id,
+            payload={
+                "appointment_id": str(appointment.id),
+                "reason": reason,
+                "starts_at": start.isoformat(),
+                "ends_at": appointment.ends_at.isoformat(),
+            },
+            processing_status="pending",
+            attempt_count=0,
+        )
+    )
     _queue_appointment_search_sync(db, appointment.id)
     await _supersede_pending(db, ChangeRequest.appointment_id == appointment.id)
 
@@ -475,38 +548,67 @@ async def submit_change_request(
 ) -> ChangeRequest:
     """Record a coach request (with any other staged changes), queue admin emails, and commit."""
     if replace_pending:
-        await _supersede_pending(db, ChangeRequest.instructor_id == coach.id, ChangeRequest.request_type == request_type)
+        await _supersede_pending(
+            db, ChangeRequest.instructor_id == coach.id, ChangeRequest.request_type == request_type
+        )
     note = coach_note.strip() if coach_note and coach_note.strip() else None
     request = ChangeRequest(
-        instructor_id=coach.id, requested_by=user.id, request_type=request_type, payload=payload,
-        appointment_id=appointment_id, exception_id=exception_id, coach_note=note, status=cr.PENDING,
+        instructor_id=coach.id,
+        requested_by=user.id,
+        request_type=request_type,
+        payload=payload,
+        appointment_id=appointment_id,
+        exception_id=exception_id,
+        coach_note=note,
+        status=cr.PENDING,
     )
     db.add(request)
     try:
         await db.flush()
-        db.add(OutboxEvent(
-            event_type=cr.SUBMITTED_EVENT, aggregate_id=request.id,
-            payload={"change_request_id": str(request.id)}, processing_status="pending", attempt_count=0,
-        ))
+        db.add(
+            OutboxEvent(
+                event_type=cr.SUBMITTED_EVENT,
+                aggregate_id=request.id,
+                payload={"change_request_id": str(request.id)},
+                processing_status="pending",
+                attempt_count=0,
+            )
+        )
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(409, "A matching request is already waiting for admin approval. Refresh to see it.") from exc
+        raise HTTPException(
+            409, "A matching request is already waiting for admin approval. Refresh to see it."
+        ) from exc
     return request
 
 
 def pending_response(request: ChangeRequest, message: str) -> JSONResponse:
-    return JSONResponse(status_code=202, content={"request_id": str(request.id), "status": cr.PENDING, "message": message})
+    return JSONResponse(
+        status_code=202,
+        content={"request_id": str(request.id), "status": cr.PENDING, "message": message},
+    )
 
 
 @router.get("/profile")
-async def get_profile(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> dict:
-    profile = await db.scalar(select(Instructor).where(Instructor.user_id == user.id)) if user.role == UserRole.INSTRUCTOR else None
-    return {"id": str(user.id), "email": user.email, "full_name": user.full_name, "role": user.role.value,
-            "display_name": profile.display_name if profile else user.full_name,
-            "country_code": profile.country_code if profile else None,
-            "timezone": profile.timezone if profile else "UTC",
-            "meeting_url": profile.meeting_url if profile else None}
+async def get_profile(
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)
+) -> dict:
+    profile = (
+        await db.scalar(select(Instructor).where(Instructor.user_id == user.id))
+        if user.role == UserRole.INSTRUCTOR
+        else None
+    )
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "full_name": user.full_name,
+        "role": user.role.value,
+        "display_name": profile.display_name if profile else user.full_name,
+        "country_code": profile.country_code if profile else None,
+        "timezone": profile.timezone if profile else "UTC",
+        "meeting_url": profile.meeting_url if profile else None,
+    }
 
 
 @router.get("/settings")
@@ -539,7 +641,11 @@ async def integrations(_: User = Depends(require_admin)) -> list[dict]:
 
 
 @router.patch("/profile")
-async def update_profile(data: ProfileIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def update_profile(
+    data: ProfileIn,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
     user.full_name = data.full_name.strip()
     profile: Instructor | None = None
     pending: ChangeRequest | None = None
@@ -556,34 +662,63 @@ async def update_profile(data: ProfileIn, user: User = Depends(get_current_user)
         # A time zone or country change moves every weekly slot, so an admin must approve it.
         if (data.timezone, data.country_code) != (profile.timezone, profile.country_code):
             pending = await submit_change_request(
-                db, coach=profile, user=user, request_type=cr.TIMEZONE_CHANGE, replace_pending=True,
-                payload={"timezone": data.timezone, "country_code": data.country_code,
-                         "before": {"timezone": profile.timezone, "country_code": profile.country_code}},
+                db,
+                coach=profile,
+                user=user,
+                request_type=cr.TIMEZONE_CHANGE,
+                replace_pending=True,
+                payload={
+                    "timezone": data.timezone,
+                    "country_code": data.country_code,
+                    "before": {"timezone": profile.timezone, "country_code": profile.country_code},
+                },
             )
     if pending is None:
         await db.commit()
-    return {"id": str(user.id), "email": user.email, "full_name": user.full_name, "role": user.role.value,
-            "display_name": profile.display_name if profile else user.full_name,
-            "country_code": profile.country_code if profile else None,
-            "timezone": profile.timezone if profile else data.timezone,
-            "meeting_url": profile.meeting_url if profile else None,
-            "pending_request_id": str(pending.id) if pending else None}
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "full_name": user.full_name,
+        "role": user.role.value,
+        "display_name": profile.display_name if profile else user.full_name,
+        "country_code": profile.country_code if profile else None,
+        "timezone": profile.timezone if profile else data.timezone,
+        "meeting_url": profile.meeting_url if profile else None,
+        "pending_request_id": str(pending.id) if pending else None,
+    }
 
 
 @router.get("/instructors")
-async def list_instructors(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> list[dict]:
-    query = select(Instructor, User).join(User, Instructor.user_id == User.id).order_by(Instructor.display_name)
+async def list_instructors(
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)
+) -> list[dict]:
+    query = (
+        select(Instructor, User)
+        .join(User, Instructor.user_id == User.id)
+        .order_by(Instructor.display_name)
+    )
     if user.role == UserRole.INSTRUCTOR:
         query = query.where(Instructor.user_id == user.id)
     rows = (await db.execute(query)).all()
-    return [{"id": str(i.id), "user_id": str(u.id), "display_name": i.display_name, "timezone": i.timezone,
-             "country_code": i.country_code,
-             "meeting_url": i.meeting_url,
-             "is_available_for_booking": i.is_available_for_booking and u.is_active, "email": u.email, "is_active": u.is_active}
-            for i, u in rows]
+    return [
+        {
+            "id": str(i.id),
+            "user_id": str(u.id),
+            "display_name": i.display_name,
+            "timezone": i.timezone,
+            "country_code": i.country_code,
+            "meeting_url": i.meeting_url,
+            "is_available_for_booking": i.is_available_for_booking and u.is_active,
+            "email": u.email,
+            "is_active": u.is_active,
+        }
+        for i, u in rows
+    ]
 
 
-async def _enforce_public_rate_limit(request: Request, *, scope: str, limit: int, window_seconds: int) -> None:
+async def _enforce_public_rate_limit(
+    request: Request, *, scope: str, limit: int, window_seconds: int
+) -> None:
     # request.client is resolved by uvicorn from X-Forwarded-For only when the peer is a trusted proxy
     # (FORWARDED_ALLOW_IPS), so callers cannot spoof it to dodge the limit.
     client_id = request.client.host if request.client else "unknown"
@@ -591,14 +726,19 @@ async def _enforce_public_rate_limit(request: Request, *, scope: str, limit: int
     redis = get_redis_client()
     try:
         # The asyncio client always returns an awaitable; redis-py's shared stubs also allow str.
-        count = await cast("Awaitable[int]", redis.eval(
-            "local n = redis.call('INCR', KEYS[1]); if n == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]); end; return n",
-            1,
-            f"public-booking:{scope}:{digest}",
-            str(window_seconds),
-        ))
+        count = await cast(
+            "Awaitable[int]",
+            redis.eval(
+                "local n = redis.call('INCR', KEYS[1]); if n == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]); end; return n",
+                1,
+                f"public-booking:{scope}:{digest}",
+                str(window_seconds),
+            ),
+        )
     except RedisError as exc:
-        raise HTTPException(503, "Booking is temporarily unavailable. Please try again shortly.") from exc
+        raise HTTPException(
+            503, "Booking is temporarily unavailable. Please try again shortly."
+        ) from exc
     if int(count) > limit:
         raise HTTPException(
             status_code=429,
@@ -608,14 +748,18 @@ async def _enforce_public_rate_limit(request: Request, *, scope: str, limit: int
 
 
 @router.get("/public/instructors")
-async def public_booking_instructors(request: Request, db: AsyncSession = Depends(get_db_session)) -> list[dict[str, str]]:
+async def public_booking_instructors(
+    request: Request, db: AsyncSession = Depends(get_db_session)
+) -> list[dict[str, str]]:
     await _enforce_public_rate_limit(request, scope="instructors", limit=120, window_seconds=60)
-    rows = (await db.execute(
-        select(Instructor, User)
-        .join(User, User.id == Instructor.user_id)
-        .where(Instructor.is_available_for_booking.is_(True), User.is_active.is_(True))
-        .order_by(Instructor.display_name)
-    )).all()
+    rows = (
+        await db.execute(
+            select(Instructor, User)
+            .join(User, User.id == Instructor.user_id)
+            .where(Instructor.is_available_for_booking.is_(True), User.is_active.is_(True))
+            .order_by(Instructor.display_name)
+        )
+    ).all()
     # Never expose coach email addresses, account IDs, or meeting links publicly.
     return [
         {"id": str(coach.id), "display_name": coach.display_name, "timezone": coach.timezone}
@@ -624,7 +768,9 @@ async def public_booking_instructors(request: Request, db: AsyncSession = Depend
 
 
 @router.get("/public/booking-settings")
-async def public_booking_settings(request: Request, db: AsyncSession = Depends(get_db_session)) -> dict[str, int]:
+async def public_booking_settings(
+    request: Request, db: AsyncSession = Depends(get_db_session)
+) -> dict[str, int]:
     await _enforce_public_rate_limit(request, scope="settings", limit=120, window_seconds=60)
     config = await _academy_settings(db)
     return {"demo_duration_minutes": config["demo_duration_minutes"]}
@@ -688,9 +834,16 @@ async def update_instructor(
     if zone_changed and is_coach:
         # A time zone or country change moves every weekly slot, so an admin must approve it.
         pending = await submit_change_request(
-            db, coach=coach, user=user, request_type=cr.TIMEZONE_CHANGE, replace_pending=True,
-            payload={"timezone": new_timezone, "country_code": new_country,
-                     "before": {"timezone": coach.timezone, "country_code": coach.country_code}},
+            db,
+            coach=coach,
+            user=user,
+            request_type=cr.TIMEZONE_CHANGE,
+            replace_pending=True,
+            payload={
+                "timezone": new_timezone,
+                "country_code": new_country,
+                "before": {"timezone": coach.timezone, "country_code": coach.country_code},
+            },
         )
     else:
         await db.commit()
@@ -706,15 +859,44 @@ async def update_instructor(
 
 
 @router.get("/instructors/{instructor_id}/availability")
-async def get_availability(instructor_id: UUID, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def get_availability(
+    instructor_id: UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
     coach = await _instructor(db, user, instructor_id)
-    rules = (await db.scalars(select(AvailabilityRule).where(AvailabilityRule.instructor_id == coach.id).order_by(AvailabilityRule.day_of_week, AvailabilityRule.start_local_time))).all()
-    exceptions = (await db.scalars(select(AvailabilityException).where(AvailabilityException.instructor_id == coach.id).order_by(AvailabilityException.exception_date))).all()
-    pending = (await db.scalars(select(ChangeRequest).where(
-        ChangeRequest.instructor_id == coach.id,
-        ChangeRequest.status == cr.PENDING,
-        ChangeRequest.request_type.in_([cr.WEEKLY_AVAILABILITY, cr.EXCEPTION_ADD, cr.EXCEPTION_REMOVE, cr.TIMEZONE_CHANGE]),
-    ).order_by(ChangeRequest.created_at))).all()
+    rules = (
+        await db.scalars(
+            select(AvailabilityRule)
+            .where(AvailabilityRule.instructor_id == coach.id)
+            .order_by(AvailabilityRule.day_of_week, AvailabilityRule.start_local_time)
+        )
+    ).all()
+    exceptions = (
+        await db.scalars(
+            select(AvailabilityException)
+            .where(AvailabilityException.instructor_id == coach.id)
+            .order_by(AvailabilityException.exception_date)
+        )
+    ).all()
+    pending = (
+        await db.scalars(
+            select(ChangeRequest)
+            .where(
+                ChangeRequest.instructor_id == coach.id,
+                ChangeRequest.status == cr.PENDING,
+                ChangeRequest.request_type.in_(
+                    [
+                        cr.WEEKLY_AVAILABILITY,
+                        cr.EXCEPTION_ADD,
+                        cr.EXCEPTION_REMOVE,
+                        cr.TIMEZONE_CHANGE,
+                    ]
+                ),
+            )
+            .order_by(ChangeRequest.created_at)
+        )
+    ).all()
     return {
         "timezone": coach.timezone,
         "country_code": coach.country_code,
@@ -737,50 +919,111 @@ PRESERVED_WARNING = "Existing bookings were preserved. Review these classes."
 
 
 @router.put("/instructors/{instructor_id}/availability", response_model=None)
-async def replace_availability(instructor_id: UUID, data: AvailabilityIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> dict | JSONResponse:
+async def replace_availability(
+    instructor_id: UUID,
+    data: AvailabilityIn,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict | JSONResponse:
     coach = await _instructor(db, user, instructor_id)
     rules = validate_rules(data.rules)
     if user.role == UserRole.INSTRUCTOR:
-        current = (await db.scalars(select(AvailabilityRule).where(AvailabilityRule.instructor_id == coach.id).order_by(AvailabilityRule.day_of_week, AvailabilityRule.start_local_time))).all()
+        current = (
+            await db.scalars(
+                select(AvailabilityRule)
+                .where(AvailabilityRule.instructor_id == coach.id)
+                .order_by(AvailabilityRule.day_of_week, AvailabilityRule.start_local_time)
+            )
+        ).all()
         request = await submit_change_request(
-            db, coach=coach, user=user, request_type=cr.WEEKLY_AVAILABILITY, replace_pending=True, coach_note=data.note,
-            payload={"rules": [_rule_json(rule) for rule in rules], "before": {"rules": [_rule_json(rule) for rule in current]}},
+            db,
+            coach=coach,
+            user=user,
+            request_type=cr.WEEKLY_AVAILABILITY,
+            replace_pending=True,
+            coach_note=data.note,
+            payload={
+                "rules": [_rule_json(rule) for rule in rules],
+                "before": {"rules": [_rule_json(rule) for rule in current]},
+            },
         )
-        return pending_response(request, "Your weekly hours were sent to an administrator for approval.")
+        return pending_response(
+            request, "Your weekly hours were sent to an administrator for approval."
+        )
     affected = await apply_weekly_rules(db, coach, rules)
     await db.commit()
-    return {"saved": True, "affected_bookings": affected, "warning": PRESERVED_WARNING if affected else None}
+    return {
+        "saved": True,
+        "affected_bookings": affected,
+        "warning": PRESERVED_WARNING if affected else None,
+    }
 
 
-@router.post("/instructors/{instructor_id}/availability/exceptions", status_code=201, response_model=None)
-async def add_exception(instructor_id: UUID, data: ExceptionIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> dict | JSONResponse:
+@router.post(
+    "/instructors/{instructor_id}/availability/exceptions", status_code=201, response_model=None
+)
+async def add_exception(
+    instructor_id: UUID,
+    data: ExceptionIn,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict | JSONResponse:
     coach = await _instructor(db, user, instructor_id)
     validate_exception(data)
     if user.role == UserRole.INSTRUCTOR:
         request = await submit_change_request(
-            db, coach=coach, user=user, request_type=cr.EXCEPTION_ADD, coach_note=data.reason,
+            db,
+            coach=coach,
+            user=user,
+            request_type=cr.EXCEPTION_ADD,
+            coach_note=data.reason,
             payload=data.model_dump(mode="json"),
         )
         return pending_response(request, "Your request was sent to an administrator for approval.")
     item, affected = await apply_exception_add(db, coach, data)
     await db.commit()
     await db.refresh(item)
-    return {"id": str(item.id), "exception_date": item.exception_date, "exception_type": item.exception_type,
-            "affected_bookings": affected, "warning": PRESERVED_WARNING if affected else None}
+    return {
+        "id": str(item.id),
+        "exception_date": item.exception_date,
+        "exception_type": item.exception_type,
+        "affected_bookings": affected,
+        "warning": PRESERVED_WARNING if affected else None,
+    }
 
 
-@router.delete("/instructors/{instructor_id}/availability/exceptions/{exception_id}", status_code=204, response_model=None)
-async def delete_exception(instructor_id: UUID, exception_id: UUID, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_session)) -> JSONResponse | None:
+@router.delete(
+    "/instructors/{instructor_id}/availability/exceptions/{exception_id}",
+    status_code=204,
+    response_model=None,
+)
+async def delete_exception(
+    instructor_id: UUID,
+    exception_id: UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> JSONResponse | None:
     coach = await _instructor(db, user, instructor_id)
     if user.role == UserRole.INSTRUCTOR:
-        item = await db.scalar(select(AvailabilityException).where(AvailabilityException.id == exception_id, AvailabilityException.instructor_id == coach.id))
+        item = await db.scalar(
+            select(AvailabilityException).where(
+                AvailabilityException.id == exception_id,
+                AvailabilityException.instructor_id == coach.id,
+            )
+        )
         if item is None:
             raise HTTPException(404, "Availability exception not found")
         request = await submit_change_request(
-            db, coach=coach, user=user, request_type=cr.EXCEPTION_REMOVE, exception_id=item.id,
+            db,
+            coach=coach,
+            user=user,
+            request_type=cr.EXCEPTION_REMOVE,
+            exception_id=item.id,
             payload={"exception_id": str(item.id), "before": _exception_json(item)},
         )
-        return pending_response(request, "Your removal request was sent to an administrator for approval.")
+        return pending_response(
+            request, "Your removal request was sent to an administrator for approval."
+        )
     await apply_exception_remove(db, coach, exception_id)
     await db.commit()
     return None
@@ -810,7 +1053,9 @@ async def available_slots(
 async def _appointment_out(db: AsyncSession, appointment: Appointment) -> dict:
     # List endpoints eager-load this relationship to avoid one database round-trip
     # per appointment. Single-item mutation paths keep the small lazy fallback.
-    coach = appointment.__dict__.get("instructor") or await db.get(Instructor, appointment.instructor_id)
+    coach = appointment.__dict__.get("instructor") or await db.get(
+        Instructor, appointment.instructor_id
+    )
     student = appointment.student
     return {
         "id": str(appointment.id),
@@ -832,17 +1077,29 @@ async def _appointment_out(db: AsyncSession, appointment: Appointment) -> dict:
             "phone": student.phone,
             "country_code": student.country_code,
             "timezone": student.timezone,
-        } if student else None,
+        }
+        if student
+        else None,
         "instructor_name": coach.display_name if coach else "Coach",
     }
 
 
-async def _create_booking(data: BookingIn, idempotency_key: str, creator_id: UUID | None, db: AsyncSession) -> dict:
-    owner_filter = Appointment.created_by == creator_id if creator_id is not None else Appointment.created_by.is_(None)
-    existing = await db.scalar(select(Appointment).where(owner_filter, Appointment.idempotency_key == idempotency_key))
+async def _create_booking(
+    data: BookingIn, idempotency_key: str, creator_id: UUID | None, db: AsyncSession
+) -> dict:
+    owner_filter = (
+        Appointment.created_by == creator_id
+        if creator_id is not None
+        else Appointment.created_by.is_(None)
+    )
+    existing = await db.scalar(
+        select(Appointment).where(owner_filter, Appointment.idempotency_key == idempotency_key)
+    )
     if existing:
         with_student = await db.scalar(
-            select(Appointment).options(selectinload(Appointment.student)).where(Appointment.id == existing.id)
+            select(Appointment)
+            .options(selectinload(Appointment.student))
+            .where(Appointment.id == existing.id)
         )
         return await _appointment_out(db, with_student or existing)
     coach = await db.scalar(
@@ -866,20 +1123,39 @@ async def _create_booking(data: BookingIn, idempotency_key: str, creator_id: UUI
         ZoneInfo(data.student.timezone)
     except (ZoneInfoNotFoundError, ValueError) as exc:
         raise HTTPException(422, "Invalid student time zone") from exc
-    student = Student(**{**data.student.model_dump(), "email": str(data.student.email).strip().lower()})
+    student = Student(
+        **{**data.student.model_dump(), "email": str(data.student.email).strip().lower()}
+    )
     db.add(student)
     await db.flush()
     ends = start + timedelta(minutes=data.duration_minutes)
-    appointment = Appointment(instructor_id=coach.id, student_id=student.id, created_by=creator_id,
-        starts_at=start, ends_at=ends, occupied_from=start, occupied_until=ends,
-        status="confirmed", notes=data.notes,
-        meeting_url=data.meeting_url if "meeting_url" in data.model_fields_set else coach.meeting_url,
-        idempotency_key=idempotency_key)
+    appointment = Appointment(
+        instructor_id=coach.id,
+        student_id=student.id,
+        created_by=creator_id,
+        starts_at=start,
+        ends_at=ends,
+        occupied_from=start,
+        occupied_until=ends,
+        status="confirmed",
+        notes=data.notes,
+        meeting_url=data.meeting_url
+        if "meeting_url" in data.model_fields_set
+        else coach.meeting_url,
+        idempotency_key=idempotency_key,
+    )
     db.add(appointment)
     await db.flush()
     _queue_appointment_search_sync(db, appointment.id)
-    db.add(OutboxEvent(event_type="booking.created", aggregate_id=appointment.id,
-        payload={"appointment_id": str(appointment.id)}, processing_status="pending", attempt_count=0))
+    db.add(
+        OutboxEvent(
+            event_type="booking.created",
+            aggregate_id=appointment.id,
+            payload={"appointment_id": str(appointment.id)},
+            processing_status="pending",
+            attempt_count=0,
+        )
+    )
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -896,8 +1172,12 @@ async def _create_booking(data: BookingIn, idempotency_key: str, creator_id: UUI
 
 
 @router.post("/appointments", status_code=201)
-async def book_demo(data: BookingIn, idempotency_key: str = Header(alias="Idempotency-Key", min_length=8, max_length=128),
-                    admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def book_demo(
+    data: BookingIn,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=8, max_length=128),
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
     return await _create_booking(data, idempotency_key, admin.id, db)
 
 
@@ -963,16 +1243,24 @@ async def list_appointments(
     rows = (await db.scalars(query.order_by(Appointment.starts_at).limit(500))).all()
     pending_by_appointment: dict[UUID, ChangeRequest] = {}
     if rows:
-        pending_rows = (await db.scalars(select(ChangeRequest).where(
-            ChangeRequest.status == cr.PENDING,
-            ChangeRequest.appointment_id.in_([row.id for row in rows]),
-        ))).all()
-        pending_by_appointment = {item.appointment_id: item for item in pending_rows if item.appointment_id}
+        pending_rows = (
+            await db.scalars(
+                select(ChangeRequest).where(
+                    ChangeRequest.status == cr.PENDING,
+                    ChangeRequest.appointment_id.in_([row.id for row in rows]),
+                )
+            )
+        ).all()
+        pending_by_appointment = {
+            item.appointment_id: item for item in pending_rows if item.appointment_id
+        }
     output = []
     for row in rows:
         item = await _appointment_out(db, row)
         request = pending_by_appointment.get(row.id)
-        item["pending_request"] = {"id": str(request.id), "request_type": request.request_type} if request else None
+        item["pending_request"] = (
+            {"id": str(request.id), "request_type": request.request_type} if request else None
+        )
         output.append(item)
     return output
 
@@ -1013,10 +1301,14 @@ async def search_appointments_route(
     if not ids:
         return {"items": [], "estimated_total_hits": result.get("estimatedTotalHits", 0)}
 
-    query_rows = select(Appointment).options(
-        selectinload(Appointment.student),
-        selectinload(Appointment.instructor),
-    ).where(Appointment.id.in_(ids))
+    query_rows = (
+        select(Appointment)
+        .options(
+            selectinload(Appointment.student),
+            selectinload(Appointment.instructor),
+        )
+        .where(Appointment.id.in_(ids))
+    )
     if instructor_id:
         query_rows = query_rows.where(Appointment.instructor_id == UUID(instructor_id))
     if data.status:
@@ -1024,7 +1316,11 @@ async def search_appointments_route(
     rows = (await db.scalars(query_rows)).all()
     appointment_by_id = {row.id: row for row in rows}
     return {
-        "items": [await _appointment_out(db, appointment_by_id[id_]) for id_ in ids if id_ in appointment_by_id],
+        "items": [
+            await _appointment_out(db, appointment_by_id[id_])
+            for id_ in ids
+            if id_ in appointment_by_id
+        ],
         "estimated_total_hits": result.get("estimatedTotalHits", len(appointment_by_id)),
     }
 
@@ -1047,10 +1343,14 @@ async def get_appointment(
     return await _appointment_out(db, appointment)
 
 
-async def _appointment_for_change(db: AsyncSession, user: User, appointment_id: UUID) -> tuple[Appointment, Instructor | None]:
+async def _appointment_for_change(
+    db: AsyncSession, user: User, appointment_id: UUID
+) -> tuple[Appointment, Instructor | None]:
     """Load an appointment; for coaches also return their profile, hiding other coaches' bookings."""
     appointment = await db.scalar(
-        select(Appointment).options(selectinload(Appointment.student)).where(Appointment.id == appointment_id)
+        select(Appointment)
+        .options(selectinload(Appointment.student))
+        .where(Appointment.id == appointment_id)
     )
     if appointment is None:
         raise HTTPException(404, "Appointment not found")
@@ -1074,10 +1374,17 @@ async def cancel_appointment(
         if appointment.status != "confirmed":
             raise HTTPException(409, "Only confirmed demos can be cancelled")
         request = await submit_change_request(
-            db, coach=coach, user=user, request_type=cr.APPOINTMENT_CANCEL, appointment_id=appointment.id,
-            coach_note=data.reason, payload={"reason": data.reason, "before": _appointment_snapshot(appointment)},
+            db,
+            coach=coach,
+            user=user,
+            request_type=cr.APPOINTMENT_CANCEL,
+            appointment_id=appointment.id,
+            coach_note=data.reason,
+            payload={"reason": data.reason, "before": _appointment_snapshot(appointment)},
         )
-        return pending_response(request, "Your cancellation request was sent to an administrator for approval.")
+        return pending_response(
+            request, "Your cancellation request was sent to an administrator for approval."
+        )
     await apply_cancel(db, appointment, data.reason)
     await db.commit()
     return {"status": "cancelled"}
@@ -1121,12 +1428,22 @@ async def reschedule_appointment(
         # Checked now so coaches only propose open times; checked again when an admin approves.
         start, duration = await validated_reschedule_start(db, appointment, data.starts_at)
         request = await submit_change_request(
-            db, coach=coach, user=user, request_type=cr.APPOINTMENT_RESCHEDULE, appointment_id=appointment.id,
+            db,
+            coach=coach,
+            user=user,
+            request_type=cr.APPOINTMENT_RESCHEDULE,
+            appointment_id=appointment.id,
             coach_note=data.reason,
-            payload={"starts_at": start.isoformat(), "ends_at": (start + timedelta(minutes=duration)).isoformat(),
-                     "reason": data.reason, "before": _appointment_snapshot(appointment)},
+            payload={
+                "starts_at": start.isoformat(),
+                "ends_at": (start + timedelta(minutes=duration)).isoformat(),
+                "reason": data.reason,
+                "before": _appointment_snapshot(appointment),
+            },
         )
-        return pending_response(request, "Your reschedule request was sent to an administrator for approval.")
+        return pending_response(
+            request, "Your reschedule request was sent to an administrator for approval."
+        )
     await apply_reschedule(db, appointment, data.starts_at, data.reason)
     try:
         await db.commit()
@@ -1147,11 +1464,13 @@ async def appointment_notifications(
         raise HTTPException(404, "Appointment not found")
     if user.role == UserRole.INSTRUCTOR:
         await _instructor(db, user, appointment.instructor_id)
-    rows = (await db.scalars(
-        select(NotificationEvent)
-        .where(NotificationEvent.appointment_id == appointment_id)
-        .order_by(NotificationEvent.created_at, NotificationEvent.recipient)
-    )).all()
+    rows = (
+        await db.scalars(
+            select(NotificationEvent)
+            .where(NotificationEvent.appointment_id == appointment_id)
+            .order_by(NotificationEvent.created_at, NotificationEvent.recipient)
+        )
+    ).all()
     return [
         {
             "event_type": row.event_type,
@@ -1168,9 +1487,9 @@ async def appointment_notifications(
 async def list_students(
     user: User = Depends(require_admin), db: AsyncSession = Depends(get_db_session)
 ) -> list[dict]:
-    students = (await db.scalars(
-        select(Student).order_by(Student.name, Student.email).limit(500)
-    )).all()
+    students = (
+        await db.scalars(select(Student).order_by(Student.name, Student.email).limit(500))
+    ).all()
     return [
         {
             "id": str(student.id),
@@ -1203,26 +1522,38 @@ async def delete_student_data(
         )
     )
     if upcoming:
-        raise HTTPException(409, "Cancel or reschedule active and future classes before deleting student data")
-    appointment_ids = list(await db.scalars(select(Appointment.id).where(Appointment.student_id == student.id)))
+        raise HTTPException(
+            409, "Cancel or reschedule active and future classes before deleting student data"
+        )
+    appointment_ids = list(
+        await db.scalars(select(Appointment.id).where(Appointment.student_id == student.id))
+    )
     result = "deleted"
     if appointment_ids:
-        await db.execute(delete(NotificationEvent).where(
-            NotificationEvent.appointment_id.in_(appointment_ids),
-            NotificationEvent.recipient == student.email,
-        ))
-        appointments = (await db.scalars(select(Appointment).where(Appointment.id.in_(appointment_ids)))).all()
+        await db.execute(
+            delete(NotificationEvent).where(
+                NotificationEvent.appointment_id.in_(appointment_ids),
+                NotificationEvent.recipient == student.email,
+            )
+        )
+        appointments = (
+            await db.scalars(select(Appointment).where(Appointment.id.in_(appointment_ids)))
+        ).all()
         for appointment in appointments:
             appointment.student_id = None
             appointment.notes = None
             appointment.cancellation_reason = None
             appointment.reschedule_reason = None
         await db.flush()
-        pending_events = (await db.scalars(select(OutboxEvent).where(
-            OutboxEvent.aggregate_id.in_(appointment_ids),
-            OutboxEvent.event_type.in_(["booking.cancelled", "booking.rescheduled"]),
-            OutboxEvent.processing_status.in_(["pending", "processing"]),
-        ))).all()
+        pending_events = (
+            await db.scalars(
+                select(OutboxEvent).where(
+                    OutboxEvent.aggregate_id.in_(appointment_ids),
+                    OutboxEvent.event_type.in_(["booking.cancelled", "booking.rescheduled"]),
+                    OutboxEvent.processing_status.in_(["pending", "processing"]),
+                )
+            )
+        ).all()
         for event in pending_events:
             event.payload = {key: value for key, value in event.payload.items() if key != "reason"}
         for appointment_id in appointment_ids:
@@ -1239,7 +1570,11 @@ def _interval_out(interval: Interval) -> dict[str, str]:
 @router.get("/availability/overview")
 async def availability_overview(
     day: date,
-    timezone: str = Query(default="UTC", max_length=64, description="Show the day in this IANA time zone, e.g. the client's"),
+    timezone: str = Query(
+        default="UTC",
+        max_length=64,
+        description="Show the day in this IANA time zone, e.g. the client's",
+    ),
     _: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1256,75 +1591,132 @@ async def availability_overview(
     view_end = datetime.combine(day + timedelta(days=1), time.min, view_zone).astimezone(UTC)
     view = [Interval(view_start, view_end)]
 
-    coaches = (await db.execute(
-        select(Instructor)
-        .join(User, User.id == Instructor.user_id)
-        .where(User.is_active.is_(True), Instructor.is_available_for_booking.is_(True))
-        .order_by(Instructor.display_name)
-    )).scalars().all()
+    coaches = (
+        (
+            await db.execute(
+                select(Instructor)
+                .join(User, User.id == Instructor.user_id)
+                .where(User.is_active.is_(True), Instructor.is_available_for_booking.is_(True))
+                .order_by(Instructor.display_name)
+            )
+        )
+        .scalars()
+        .all()
+    )
     coach_ids = [coach.id for coach in coaches]
     if not coach_ids:
-        return {"day": day.isoformat(), "timezone": timezone, "start": view_start.isoformat(), "end": view_end.isoformat(), "coaches": []}
+        return {
+            "day": day.isoformat(),
+            "timezone": timezone,
+            "start": view_start.isoformat(),
+            "end": view_end.isoformat(),
+            "coaches": [],
+        }
 
     rules_by_coach: dict[UUID, list[AvailabilityRule]] = {coach_id: [] for coach_id in coach_ids}
-    for rule in (await db.scalars(select(AvailabilityRule).where(AvailabilityRule.instructor_id.in_(coach_ids)))).all():
+    for rule in (
+        await db.scalars(
+            select(AvailabilityRule).where(AvailabilityRule.instructor_id.in_(coach_ids))
+        )
+    ).all():
         rules_by_coach[rule.instructor_id].append(rule)
     # Any coach's local date touching this view day is within one day either side.
-    exceptions_by_coach: dict[UUID, list[AvailabilityException]] = {coach_id: [] for coach_id in coach_ids}
-    for item in (await db.scalars(select(AvailabilityException).where(
-        AvailabilityException.instructor_id.in_(coach_ids),
-        AvailabilityException.exception_date.between(day - timedelta(days=1), day + timedelta(days=1)),
-    ))).all():
+    exceptions_by_coach: dict[UUID, list[AvailabilityException]] = {
+        coach_id: [] for coach_id in coach_ids
+    }
+    for item in (
+        await db.scalars(
+            select(AvailabilityException).where(
+                AvailabilityException.instructor_id.in_(coach_ids),
+                AvailabilityException.exception_date.between(
+                    day - timedelta(days=1), day + timedelta(days=1)
+                ),
+            )
+        )
+    ).all():
         exceptions_by_coach[item.instructor_id].append(item)
     booked_by_coach: dict[UUID, list[Appointment]] = {coach_id: [] for coach_id in coach_ids}
-    for appointment in (await db.scalars(
-        select(Appointment).options(selectinload(Appointment.student)).where(
-            Appointment.instructor_id.in_(coach_ids),
-            Appointment.status == "confirmed",
-            Appointment.occupied_from < view_end,
-            Appointment.occupied_until > view_start,
-        ).order_by(Appointment.starts_at)
-    )).all():
+    for appointment in (
+        await db.scalars(
+            select(Appointment)
+            .options(selectinload(Appointment.student))
+            .where(
+                Appointment.instructor_id.in_(coach_ids),
+                Appointment.status == "confirmed",
+                Appointment.occupied_from < view_end,
+                Appointment.occupied_until > view_start,
+            )
+            .order_by(Appointment.starts_at)
+        )
+    ).all():
         booked_by_coach[appointment.instructor_id].append(appointment)
-    pending_by_coach = dict((await db.execute(
-        select(ChangeRequest.instructor_id, func.count(ChangeRequest.id))
-        .where(ChangeRequest.instructor_id.in_(coach_ids), ChangeRequest.status == cr.PENDING)
-        .group_by(ChangeRequest.instructor_id)
-    )).all())
+    pending_by_coach = dict(
+        (
+            await db.execute(
+                select(ChangeRequest.instructor_id, func.count(ChangeRequest.id))
+                .where(
+                    ChangeRequest.instructor_id.in_(coach_ids), ChangeRequest.status == cr.PENDING
+                )
+                .group_by(ChangeRequest.instructor_id)
+            )
+        ).all()
+    )
 
     output = []
     for coach in coaches:
         coach_zone = ZoneInfo(coach.timezone)
-        local_days = {view_start.astimezone(coach_zone).date(), (view_end - timedelta(microseconds=1)).astimezone(coach_zone).date()}
+        local_days = {
+            view_start.astimezone(coach_zone).date(),
+            (view_end - timedelta(microseconds=1)).astimezone(coach_zone).date(),
+        }
         windows: list[Interval] = []
         for local_day in sorted(local_days):
-            windows.extend(actual_windows(local_day, coach.timezone, rules_by_coach[coach.id], exceptions_by_coach[coach.id]))
+            windows.extend(
+                actual_windows(
+                    local_day,
+                    coach.timezone,
+                    rules_by_coach[coach.id],
+                    exceptions_by_coach[coach.id],
+                )
+            )
         # Clip working hours to the viewed day, then remove booked time.
         working = subtract(view, subtract(view, merge(windows)))
         booked = booked_by_coach[coach.id]
-        free = subtract(working, [Interval(item.occupied_from, item.occupied_until) for item in booked])
-        output.append({
-            "id": str(coach.id),
-            "display_name": coach.display_name,
-            "timezone": coach.timezone,
-            "free": [_interval_out(interval) for interval in free],
-            "booked": [
-                {
-                    "id": str(item.id),
-                    "start": item.starts_at.isoformat(),
-                    "end": item.ends_at.isoformat(),
-                    "student_name": item.student.name if item.student else "Deleted student",
-                }
-                for item in booked
-            ],
-            "pending_requests": int(pending_by_coach.get(coach.id, 0)),
-        })
-    return {"day": day.isoformat(), "timezone": timezone, "start": view_start.isoformat(), "end": view_end.isoformat(), "coaches": output}
+        free = subtract(
+            working, [Interval(item.occupied_from, item.occupied_until) for item in booked]
+        )
+        output.append(
+            {
+                "id": str(coach.id),
+                "display_name": coach.display_name,
+                "timezone": coach.timezone,
+                "free": [_interval_out(interval) for interval in free],
+                "booked": [
+                    {
+                        "id": str(item.id),
+                        "start": item.starts_at.isoformat(),
+                        "end": item.ends_at.isoformat(),
+                        "student_name": item.student.name if item.student else "Deleted student",
+                    }
+                    for item in booked
+                ],
+                "pending_requests": int(pending_by_coach.get(coach.id, 0)),
+            }
+        )
+    return {
+        "day": day.isoformat(),
+        "timezone": timezone,
+        "start": view_start.isoformat(),
+        "end": view_end.isoformat(),
+        "coaches": output,
+    }
 
 
 @router.get("/dashboard/summary")
 async def dashboard_summary(
-    timezone: str | None = Query(default=None, max_length=64, description="Viewer's IANA time zone for 'today'"),
+    timezone: str | None = Query(
+        default=None, max_length=64, description="Viewer's IANA time zone for 'today'"
+    ),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict[str, int]:
@@ -1354,19 +1746,48 @@ async def dashboard_summary(
     today_start = datetime.combine(local_today, time.min, zone).astimezone(UTC)
     tomorrow = datetime.combine(local_today + timedelta(days=1), time.min, zone).astimezone(UTC)
     scope = [Appointment.instructor_id.in_(coach_ids)] if coach_ids else []
-    total_instructors = 0 if coach_ids else int(
-        await db.scalar(select(func.count(Instructor.id)).join(User, User.id == Instructor.user_id).where(User.is_active.is_(True))) or 0
+    total_instructors = (
+        0
+        if coach_ids
+        else int(
+            await db.scalar(
+                select(func.count(Instructor.id))
+                .join(User, User.id == Instructor.user_id)
+                .where(User.is_active.is_(True))
+            )
+            or 0
+        )
     )
-    upcoming = int(await db.scalar(select(func.count(Appointment.id)).where(
-        *scope, Appointment.status == "confirmed", Appointment.starts_at >= now,
-    )) or 0)
-    today = int(await db.scalar(select(func.count(Appointment.id)).where(
-        *scope, Appointment.status == "confirmed", Appointment.starts_at >= today_start,
-        Appointment.starts_at < tomorrow,
-    )) or 0)
-    cancelled = int(await db.scalar(select(func.count(Appointment.id)).where(
-        *scope, Appointment.status == "cancelled",
-    )) or 0)
+    upcoming = int(
+        await db.scalar(
+            select(func.count(Appointment.id)).where(
+                *scope,
+                Appointment.status == "confirmed",
+                Appointment.starts_at >= now,
+            )
+        )
+        or 0
+    )
+    today = int(
+        await db.scalar(
+            select(func.count(Appointment.id)).where(
+                *scope,
+                Appointment.status == "confirmed",
+                Appointment.starts_at >= today_start,
+                Appointment.starts_at < tomorrow,
+            )
+        )
+        or 0
+    )
+    cancelled = int(
+        await db.scalar(
+            select(func.count(Appointment.id)).where(
+                *scope,
+                Appointment.status == "cancelled",
+            )
+        )
+        or 0
+    )
     return {
         "total_instructors": total_instructors,
         "upcoming_appointments": upcoming,

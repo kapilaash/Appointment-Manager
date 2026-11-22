@@ -1,4 +1,3 @@
-
 from pydantic import AnyHttpUrl, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -20,7 +19,9 @@ class Settings(BaseSettings):
     FAILED_OUTBOX_RETENTION_DAYS: int = Field(default=90, ge=1, le=3650)
     ACCOUNT_TOKEN_RETENTION_DAYS: int = Field(default=30, ge=1, le=3650)
 
-    DATABASE_URL: str = "postgresql+asyncpg://chess_admin:chess_secure_pass_2025@localhost:5432/chess_academy"
+    DATABASE_URL: str = (
+        "postgresql+asyncpg://chess_admin:chess_secure_pass_2025@localhost:5432/chess_academy"
+    )
     # Log every SQL statement; noisy and memory-hungry, so opt-in for debugging only.
     DB_ECHO: bool = False
     DB_POOL_SIZE: int = Field(default=5, ge=1, le=100)
@@ -70,23 +71,27 @@ class Settings(BaseSettings):
             if (
                 len(self.SECRET_KEY.encode("utf-8")) < 32
                 or self.SECRET_KEY in known_sample_keys
-                or any(marker in self.SECRET_KEY.lower() for marker in ("replace", "change_me", "example"))
+                or any(
+                    marker in self.SECRET_KEY.lower()
+                    for marker in ("replace", "change_me", "example")
+                )
             ):
-                raise ValueError("Production SECRET_KEY must be a unique random value of at least 32 bytes")
+                raise ValueError(
+                    "Production SECRET_KEY must be a unique random value of at least 32 bytes"
+                )
             if not self.CORS_ORIGINS or any(str(origin) == "*" for origin in self.CORS_ORIGINS):
                 raise ValueError("Production CORS_ORIGINS must list the exact academy HTTPS origin")
             if any(not str(origin).startswith("https://") for origin in self.CORS_ORIGINS):
                 raise ValueError("Every production CORS origin must use HTTPS")
             allowed_origins = {str(origin).rstrip("/") for origin in self.CORS_ORIGINS}
             if self.FRONTEND_URL.rstrip("/") not in allowed_origins:
-                raise ValueError("Production FRONTEND_URL must match one of the allowed CORS origins")
+                raise ValueError(
+                    "Production FRONTEND_URL must match one of the allowed CORS origins"
+                )
         return self
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=True,
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore"
     )
 
 

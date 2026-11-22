@@ -55,11 +55,19 @@ export function Dialog({
       className="m-auto w-[min(92vw,34rem)] rounded-2xl border-0 bg-transparent p-0 shadow-2xl backdrop:bg-slate-950/40 backdrop:backdrop-blur-[2px]"
     >
       <section className="dialog-enter rounded-2xl border border-slate-200 bg-surface p-4 sm:p-6">
-        <h2 id={titleId} className="text-lg font-semibold text-heading">{title}</h2>
-        {description && <p id={descriptionId} className="mt-2 text-sm leading-6 text-slate-600">{description}</p>}
+        <h2 id={titleId} className="text-lg font-semibold text-heading">
+          {title}
+        </h2>
+        {description && (
+          <p id={descriptionId} className="mt-2 text-sm leading-6 text-slate-600">
+            {description}
+          </p>
+        )}
         {children && <div className="mt-4">{children}</div>}
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={onClose} disabled={busy}>{cancelLabel}</Button>
+          <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={onClose} disabled={busy}>
+            {cancelLabel}
+          </Button>
           <Button
             type="button"
             className="w-full sm:w-auto"

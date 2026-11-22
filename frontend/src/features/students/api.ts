@@ -5,7 +5,8 @@ export const studentApi = api.injectEndpoints({
   endpoints: (build) => ({
     students: build.query<Student[], void>({ query: () => '/students', providesTags: ['Student'] }),
     deleteStudent: build.mutation<{ status: 'deleted' }, string>({
-      query: (id) => ({ url: `/students/${id}`, method: 'DELETE' }), invalidatesTags: ['Student', 'Appointment'],
+      query: (id) => ({ url: `/students/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Student', 'Appointment'],
     }),
   }),
 });

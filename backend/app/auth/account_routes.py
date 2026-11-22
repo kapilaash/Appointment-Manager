@@ -83,7 +83,11 @@ async def change_password(
     # Any reset link still in someone's inbox should stop working.
     await db.execute(
         update(AccountToken)
-        .where(AccountToken.user_id == user.id, AccountToken.purpose.in_(RESET_PURPOSES), AccountToken.consumed_at.is_(None))
+        .where(
+            AccountToken.user_id == user.id,
+            AccountToken.purpose.in_(RESET_PURPOSES),
+            AccountToken.consumed_at.is_(None),
+        )
         .values(revoked_at=now)
     )
     queue_account_notice(db, user, PASSWORD_CHANGED)
@@ -103,7 +107,9 @@ async def start_mfa_setup(user: User = Depends(get_current_user)) -> MfaSetupOut
         raise HTTPException(409, "Two-step sign-in is already on.")
     secret = mfa.new_secret()
     try:
-        await get_redis_client().setex(f"{MFA_SETUP_PREFIX}{user.id}", MFA_SETUP_TTL_SECONDS, mfa.encrypt_secret(secret))
+        await get_redis_client().setex(
+            f"{MFA_SETUP_PREFIX}{user.id}", MFA_SETUP_TTL_SECONDS, mfa.encrypt_secret(secret)
+        )
     except RedisError as exc:
         raise HTTPException(503, "This is temporarily unavailable. Try again shortly.") from exc
     return MfaSetupOut(secret=secret, otpauth_uri=mfa.provisioning_uri(secret, user.email))
@@ -124,7 +130,9 @@ async def enable_mfa(
     if secret is None:
         raise HTTPException(410, "Setup timed out. Start again to get a new QR code.")
     if mfa.matching_time_step(secret, payload.code) is None:
-        raise HTTPException(400, "That code is not right. Check the time on your phone and try the newest code.")
+        raise HTTPException(
+            400, "That code is not right. Check the time on your phone and try the newest code."
+        )
     codes = mfa.new_recovery_codes()
     user.mfa_secret_encrypted = mfa.encrypt_secret(secret)
     user.mfa_enabled_at = datetime.now(UTC)
@@ -147,7 +155,9 @@ async def disable_mfa(
         return
     await _confirm_password(request, user, payload.password)
     if not await verify_second_factor(get_redis_client(), db, user, payload.code):
-        raise HTTPException(400, "That code is not right. Use a current authenticator code or a recovery code.")
+        raise HTTPException(
+            400, "That code is not right. Use a current authenticator code or a recovery code."
+        )
     user.mfa_secret_encrypted = None
     user.mfa_enabled_at = None
     user.mfa_recovery_code_hashes = None
@@ -178,7 +188,10 @@ async def security_overview(user: User = Depends(get_current_user)) -> dict:
     return {
         "mfa_enabled": user.mfa_enabled,
         "mfa_enabled_at": user.mfa_enabled_at.isoformat() if user.mfa_enabled_at else None,
-        "recovery_codes_remaining": len(user.mfa_recovery_code_hashes or []) if user.mfa_enabled else 0,
-        "password_changed_at": user.password_changed_at.isoformat() if user.password_changed_at else None,
+        "recovery_codes_remaining": len(user.mfa_recovery_code_hashes or [])
+        if user.mfa_enabled
+        else 0,
+        "password_changed_at": user.password_changed_at.isoformat()
+        if user.password_changed_at
+        else None,
     }
-

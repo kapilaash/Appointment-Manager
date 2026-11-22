@@ -17,7 +17,12 @@ type ExceptionSnapshot = {
   exception_type: 'unavailable' | 'additional_available';
   reason: string | null;
 };
-type AppointmentSnapshot = { starts_at: string; ends_at: string; student_name: string | null; student_timezone: string | null };
+type AppointmentSnapshot = {
+  starts_at: string;
+  ends_at: string;
+  student_name: string | null;
+  student_timezone: string | null;
+};
 
 export type ChangeRequest = {
   id: string;
@@ -42,7 +47,10 @@ export type ChangeRequest = {
     reason?: string;
   } & Partial<ExceptionSnapshot>;
   /** What it looked like when the coach asked. */
-  before: ({ rules?: RuleSnapshot[]; timezone?: string; country_code?: string | null } & Partial<ExceptionSnapshot> & Partial<AppointmentSnapshot>) | null;
+  before:
+    | ({ rules?: RuleSnapshot[]; timezone?: string; country_code?: string | null } & Partial<ExceptionSnapshot> &
+        Partial<AppointmentSnapshot>)
+    | null;
   review_note: string | null;
   reviewed_by_email: string | null;
   reviewed_at: string | null;
@@ -53,7 +61,12 @@ export type ChangeRequest = {
 export type PendingReceipt = { request_id: string; status: 'pending'; message: string };
 
 export function isPendingReceipt(value: unknown): value is PendingReceipt {
-  return typeof value === 'object' && value !== null && (value as { status?: unknown }).status === 'pending' && 'request_id' in value;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { status?: unknown }).status === 'pending' &&
+    'request_id' in value
+  );
 }
 
 type ApproveResult = { request: ChangeRequest; affected_bookings: string[]; warning: string | null };
@@ -63,7 +76,10 @@ const appliedTags = ['ChangeRequests', 'Availability', 'Appointment', 'Instructo
 
 export const changeRequestApi = api.injectEndpoints({
   endpoints: (build) => ({
-    changeRequests: build.query<{ items: ChangeRequest[]; next_cursor: string | null }, { status?: ChangeRequestStatus; before?: string } | void>({
+    changeRequests: build.query<
+      { items: ChangeRequest[]; next_cursor: string | null },
+      { status?: ChangeRequestStatus; before?: string } | void
+    >({
       query: (params) => ({ url: '/change-requests', params: params ?? {} }),
       providesTags: ['ChangeRequests'],
     }),

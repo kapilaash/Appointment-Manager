@@ -36,13 +36,15 @@ def database_url() -> str:
     Base.metadata.drop_all(sync_engine)
     Base.metadata.create_all(sync_engine)
     with sync_engine.begin() as connection:
-        connection.execute(text("""
+        connection.execute(
+            text("""
             ALTER TABLE appointments ADD CONSTRAINT ex_appointments_instructor_occupied
             EXCLUDE USING gist (
                 instructor_id WITH =,
                 tstzrange(occupied_from, occupied_until, '[)') WITH &&
             ) WHERE (status = 'confirmed')
-        """))
+        """)
+        )
     yield url
     Base.metadata.drop_all(sync_engine)
     sync_engine.dispose()

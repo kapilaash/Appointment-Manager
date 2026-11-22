@@ -27,12 +27,14 @@ def appointment_document(
 
 
 async def sync_appointment(db: AsyncSession, appointment_id: UUID) -> None:
-    row = (await db.execute(
-        select(Appointment, Student, Instructor)
-        .outerjoin(Student, Student.id == Appointment.student_id)
-        .join(Instructor, Instructor.id == Appointment.instructor_id)
-        .where(Appointment.id == appointment_id)
-    )).one_or_none()
+    row = (
+        await db.execute(
+            select(Appointment, Student, Instructor)
+            .outerjoin(Student, Student.id == Appointment.student_id)
+            .join(Instructor, Instructor.id == Appointment.instructor_id)
+            .where(Appointment.id == appointment_id)
+        )
+    ).one_or_none()
     if row is None:
         await delete_appointment_document(str(appointment_id))
         return
@@ -41,13 +43,15 @@ async def sync_appointment(db: AsyncSession, appointment_id: UUID) -> None:
 
 
 async def rebuild_appointment_index(db: AsyncSession, batch_size: int = 500) -> int:
-    rows = (await db.execute(
-        select(Appointment, Student, Instructor)
-        .outerjoin(Student, Student.id == Appointment.student_id)
-        .join(Instructor, Instructor.id == Appointment.instructor_id)
-        .order_by(Appointment.id)
-    )).all()
+    rows = (
+        await db.execute(
+            select(Appointment, Student, Instructor)
+            .outerjoin(Student, Student.id == Appointment.student_id)
+            .join(Instructor, Instructor.id == Appointment.instructor_id)
+            .order_by(Appointment.id)
+        )
+    ).all()
     documents = [appointment_document(*row) for row in rows]
     for start in range(0, len(documents), batch_size):
-        await index_appointment_documents(documents[start:start + batch_size])
+        await index_appointment_documents(documents[start : start + batch_size])
     return len(documents)

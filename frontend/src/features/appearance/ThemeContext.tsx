@@ -1,4 +1,14 @@
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import { flushSync } from 'react-dom';
 import { useSaveThemePreferenceMutation } from '../auth/api';
 
@@ -80,20 +90,30 @@ function applyTheme(theme: AppTheme) {
   window.setTimeout(() => root.classList.remove('theme-transitioning'), TRANSITION_MS);
 }
 
-export function ThemeProvider({ userId, savedPreference, children }: {
+export function ThemeProvider({
+  userId,
+  savedPreference,
+  children,
+}: {
   userId: string;
   /** The preference stored on the account, so it follows the user across devices. */
   savedPreference: ThemePreference | null | undefined;
   children: ReactNode;
 }) {
-  const [preference, setPreferenceState] = useState<ThemePreference>(() => savedPreference ?? readStoredPreference(userId));
+  const [preference, setPreferenceState] = useState<ThemePreference>(
+    () => savedPreference ?? readStoredPreference(userId),
+  );
   // Adopt a preference saved on another device when the account data refreshes.
   const [lastServerPreference, setLastServerPreference] = useState(savedPreference);
   if (savedPreference !== lastServerPreference) {
     setLastServerPreference(savedPreference);
     if (savedPreference) setPreferenceState(savedPreference);
   }
-  const deviceIsDark = useSyncExternalStore(subscribeToDeviceScheme, () => darkQuery().matches, () => false);
+  const deviceIsDark = useSyncExternalStore(
+    subscribeToDeviceScheme,
+    () => darkQuery().matches,
+    () => false,
+  );
   const theme: AppTheme = preference === 'system' ? (deviceIsDark ? 'dark' : 'light') : preference;
   const [savePreference] = useSaveThemePreferenceMutation();
 
@@ -110,11 +130,16 @@ export function ThemeProvider({ userId, savedPreference, children }: {
     }
   }, [preference]);
 
-  const setPreference = useCallback((next: ThemePreference) => {
-    setPreferenceState(next);
-    // Saving to the account is best effort; the local choice already applies.
-    void savePreference({ theme: next }).unwrap().catch(() => undefined);
-  }, [savePreference]);
+  const setPreference = useCallback(
+    (next: ThemePreference) => {
+      setPreferenceState(next);
+      // Saving to the account is best effort; the local choice already applies.
+      void savePreference({ theme: next })
+        .unwrap()
+        .catch(() => undefined);
+    },
+    [savePreference],
+  );
 
   const value = useMemo(() => ({ preference, theme, setPreference }), [preference, theme, setPreference]);
   return <AppearanceContext.Provider value={value}>{children}</AppearanceContext.Provider>;

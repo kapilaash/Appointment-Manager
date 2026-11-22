@@ -28,13 +28,15 @@ def postgres_engine():
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     with engine.begin() as connection:
-        connection.execute(text("""
+        connection.execute(
+            text("""
             ALTER TABLE appointments ADD CONSTRAINT ex_appointments_instructor_occupied
             EXCLUDE USING gist (
                 instructor_id WITH =,
                 tstzrange(occupied_from, occupied_until, '[)') WITH &&
             ) WHERE (status = 'confirmed')
-        """))
+        """)
+        )
     yield engine
     Base.metadata.drop_all(engine)
     engine.dispose()
@@ -43,9 +45,26 @@ def postgres_engine():
 def test_concurrent_overlapping_bookings_allow_exactly_one(postgres_engine) -> None:
     user_id, instructor_id, student_id = uuid4(), uuid4(), uuid4()
     with Session(postgres_engine) as session:
-        session.add(User(id=user_id, email=f"admin-{user_id}@example.test", password_hash="hash", role=UserRole.ADMIN, full_name="Admin"))
-        session.add(Instructor(id=instructor_id, user_id=user_id, display_name="Coach", timezone="UTC"))
-        session.add(Student(id=student_id, name="Student", email=f"student-{student_id}@example.test", timezone="UTC"))
+        session.add(
+            User(
+                id=user_id,
+                email=f"admin-{user_id}@example.test",
+                password_hash="hash",
+                role=UserRole.ADMIN,
+                full_name="Admin",
+            )
+        )
+        session.add(
+            Instructor(id=instructor_id, user_id=user_id, display_name="Coach", timezone="UTC")
+        )
+        session.add(
+            Student(
+                id=student_id,
+                name="Student",
+                email=f"student-{student_id}@example.test",
+                timezone="UTC",
+            )
+        )
         session.commit()
 
     start_barrier = threading.Barrier(2)
@@ -56,12 +75,20 @@ def test_concurrent_overlapping_bookings_allow_exactly_one(postgres_engine) -> N
         start_barrier.wait(timeout=10)
         try:
             with Session(postgres_engine) as session:
-                session.add(Appointment(
-                    id=appointment_id, instructor_id=instructor_id, student_id=student_id,
-                    created_by=user_id, starts_at=starts, ends_at=starts + timedelta(hours=1),
-                    occupied_from=starts, occupied_until=starts + timedelta(hours=1),
-                    status="confirmed", idempotency_key=str(appointment_id),
-                ))
+                session.add(
+                    Appointment(
+                        id=appointment_id,
+                        instructor_id=instructor_id,
+                        student_id=student_id,
+                        created_by=user_id,
+                        starts_at=starts,
+                        ends_at=starts + timedelta(hours=1),
+                        occupied_from=starts,
+                        occupied_until=starts + timedelta(hours=1),
+                        status="confirmed",
+                        idempotency_key=str(appointment_id),
+                    )
+                )
                 session.commit()
             return "created"
         except IntegrityError:

@@ -29,9 +29,7 @@ class LoginFailureState:
 
 
 def _key(scope: str, value: str) -> str:
-    digest = hmac.new(
-        settings.SECRET_KEY.encode(), value.encode(), hashlib.sha256
-    ).hexdigest()
+    digest = hmac.new(settings.SECRET_KEY.encode(), value.encode(), hashlib.sha256).hexdigest()
     return f"login-failure:{scope}:{digest}"
 
 

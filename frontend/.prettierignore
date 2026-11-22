@@ -1,0 +1,8 @@
+dist
+coverage
+node_modules
+.npm-cache
+playwright-report
+test-results
+e2e/visual/__screenshots__
+package-lock.json

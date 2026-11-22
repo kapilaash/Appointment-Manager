@@ -25,26 +25,74 @@ export function ResetPasswordPage() {
     }
   }
 
-  const failure = result.error && 'status' in result.error && result.error.status === 422
-    ? apiErrorDetail(result.error) ?? 'Choose a stronger password.'
-    : 'This reset link is invalid, expired, or already used. Request a new one from the sign-in page.';
+  const failure =
+    result.error && 'status' in result.error && result.error.status === 422
+      ? (apiErrorDetail(result.error) ?? 'Choose a stronger password.')
+      : 'This reset link is invalid, expired, or already used. Request a new one from the sign-in page.';
 
   return (
-    <AuthLayout title="Choose a new password" subtitle="After saving, you’ll be signed out everywhere and can sign in with the new password.">
+    <AuthLayout
+      title="Choose a new password"
+      subtitle="After saving, you’ll be signed out everywhere and can sign in with the new password."
+    >
       {result.isSuccess ? (
-        <div role="status" className="mt-7 flex items-start gap-3 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-900">
+        <div
+          role="status"
+          className="mt-7 flex items-start gap-3 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-900"
+        >
           <CheckCircle2 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
-          <span>Password updated. <a href="/" className="font-semibold underline">Sign in</a> with your new password.</span>
+          <span>
+            Password updated.{' '}
+            <a href="/" className="font-semibold underline">
+              Sign in
+            </a>{' '}
+            with your new password.
+          </span>
         </div>
       ) : !token ? (
-        <p role="alert" className="mt-7 rounded-lg bg-red-50 p-3 text-sm text-red-700">This page needs the link from your reset email. <a href="/forgot-password" className="font-semibold underline">Request a new link</a>.</p>
+        <p role="alert" className="mt-7 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          This page needs the link from your reset email.{' '}
+          <a href="/forgot-password" className="font-semibold underline">
+            Request a new link
+          </a>
+          .
+        </p>
       ) : (
         <form onSubmit={submit} className="mt-7 space-y-5">
-          <PasswordField label="New password" autoComplete="new-password" required minLength={12} maxLength={128} hint={PASSWORD_HINT} value={password} onChange={(event) => setPassword(event.target.value)} />
-          <PasswordField label="Confirm new password" autoComplete="new-password" required minLength={12} maxLength={128} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
-          {mismatch && <p role="alert" className="text-sm text-red-700">Passwords do not match.</p>}
-          {result.isError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{failure}</p>}
-          <button type="submit" disabled={password.length < 12 || mismatch || result.isLoading} className="flex min-h-12 w-full items-center justify-center rounded-xl bg-action px-4 py-3 text-sm font-semibold text-on-action shadow-sm hover:bg-action-hover disabled:opacity-60">
+          <PasswordField
+            label="New password"
+            autoComplete="new-password"
+            required
+            minLength={12}
+            maxLength={128}
+            hint={PASSWORD_HINT}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <PasswordField
+            label="Confirm new password"
+            autoComplete="new-password"
+            required
+            minLength={12}
+            maxLength={128}
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+          />
+          {mismatch && (
+            <p role="alert" className="text-sm text-red-700">
+              Passwords do not match.
+            </p>
+          )}
+          {result.isError && (
+            <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+              {failure}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={password.length < 12 || mismatch || result.isLoading}
+            className="flex min-h-12 w-full items-center justify-center rounded-xl bg-action px-4 py-3 text-sm font-semibold text-on-action shadow-sm hover:bg-action-hover disabled:opacity-60"
+          >
             {result.isLoading ? 'Saving…' : 'Set new password'}
           </button>
         </form>

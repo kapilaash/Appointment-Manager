@@ -30,7 +30,9 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=now),
         sa.ForeignKeyConstraint(["appointment_id"], ["appointments.id"], ondelete="CASCADE"),
     )
-    op.create_index("ix_notification_events_appointment_id", "notification_events", ["appointment_id"])
+    op.create_index(
+        "ix_notification_events_appointment_id", "notification_events", ["appointment_id"]
+    )
     op.create_index(
         "uq_notification_event_recipient",
         "notification_events",

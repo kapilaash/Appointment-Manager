@@ -74,7 +74,8 @@ def actual_windows(
     except ZoneInfoNotFoundError as exc:
         raise ValueError("Unknown IANA time zone") from exc
     local_rules = [
-        rule for rule in rules
+        rule
+        for rule in rules
         if rule.day_of_week == day.weekday()
         and (rule.effective_from is None or rule.effective_from <= day)
         and (rule.effective_until is None or rule.effective_until >= day)
