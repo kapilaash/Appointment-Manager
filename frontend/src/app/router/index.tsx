@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { lazy, Suspense, type ReactNode } from 'react';
 import { useEffect } from 'react';
-import { createBrowserRouter, Navigate, Outlet, useRouteError } from 'react-router-dom';
+import { createBrowserRouter, Navigate, Outlet, useLocation, useRouteError } from 'react-router-dom';
 import { App } from '../../components/layout/App';
 import { PageSkeleton } from '../../components/ui/Skeleton';
 import { useMeQuery } from '../../features/auth/api';
@@ -19,8 +19,8 @@ const SettingsPage = lazy(() => import('../../features/dashboard/SettingsPage').
 const StudentsPage = lazy(() => import('../../features/students/StudentsPage').then((module) => ({ default: module.StudentsPage })));
 const CoachAdminPage = lazy(() => import('../../features/coaches/CoachAdminPage').then((module) => ({ default: module.CoachAdminPage })));
 const CoachRegistrationPage = lazy(() => import('../../features/coaches/CoachRegistrationPage').then((module) => ({ default: module.CoachRegistrationPage })));
-const CoachPasswordResetPage = lazy(() => import('../../features/coaches/CoachPasswordResetPage').then((module) => ({ default: module.CoachPasswordResetPage })));
-const CoachForgotPasswordPage = lazy(() => import('../../features/coaches/CoachForgotPasswordPage').then((module) => ({ default: module.CoachForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('../../features/auth/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage })));
+const ForgotPasswordPage = lazy(() => import('../../features/auth/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })));
 const ProfilePage = lazy(() => import('../../features/auth/ProfilePage').then((module) => ({ default: module.ProfilePage })));
 const TeamAvailabilityPage = lazy(() => import('../../features/availability/TeamAvailabilityPage').then((module) => ({ default: module.TeamAvailabilityPage })));
 const RequestsPage = lazy(() => import('../../features/requests/RequestsPage').then((module) => ({ default: module.RequestsPage })));
@@ -29,6 +29,12 @@ const HelpPage = lazy(() => import('../../features/help/HelpPage').then((module)
 // This helper belongs beside the router so all lazy pages share the same loading state.
 function RouteBoundary({ children }: { children: ReactNode }) {
   return <Suspense fallback={<div role="status" aria-label="Loading page"><PageSkeleton /></div>}>{children}</Suspense>;
+}
+
+/** Redirect an old address, keeping the #token fragment that carries one-time links. */
+function LegacyRedirect({ to }: { to: string }) {
+  const location = useLocation();
+  return <Navigate to={{ pathname: to, hash: location.hash }} replace />;
 }
 
 function Home() {
@@ -67,8 +73,11 @@ function RouteErrorPage() {
 export const router = createBrowserRouter([
   { path: '/book-demo', element: <RouteBoundary><PublicBookingPage /></RouteBoundary>, errorElement: <RouteErrorPage /> },
   { path: '/register/coach', element: <RouteBoundary><CoachRegistrationPage /></RouteBoundary>, errorElement: <RouteErrorPage /> },
-  { path: '/reset/coach', element: <RouteBoundary><CoachPasswordResetPage /></RouteBoundary>, errorElement: <RouteErrorPage /> },
-  { path: '/forgot/coach', element: <RouteBoundary><CoachForgotPasswordPage /></RouteBoundary>, errorElement: <RouteErrorPage /> },
+  { path: '/reset-password', element: <RouteBoundary><ResetPasswordPage /></RouteBoundary>, errorElement: <RouteErrorPage /> },
+  { path: '/forgot-password', element: <RouteBoundary><ForgotPasswordPage /></RouteBoundary>, errorElement: <RouteErrorPage /> },
+  // Links in emails sent before these pages served every role keep working.
+  { path: '/reset/coach', element: <LegacyRedirect to="/reset-password" /> },
+  { path: '/forgot/coach', element: <LegacyRedirect to="/forgot-password" /> },
   {
     path: '/', element: <App />, errorElement: <RouteErrorPage />, children: [
       { index: true, element: <RouteBoundary><Home /></RouteBoundary> },

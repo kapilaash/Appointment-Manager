@@ -57,12 +57,6 @@ export const coachApi = baseApi.injectEndpoints({
     registerCoach: builder.mutation<unknown, CoachRegistration>({
       query: (body) => ({ url: '/auth/coach-register', method: 'POST', body }),
     }),
-    resetCoachPassword: builder.mutation<void, { token: string; password: string }>({
-      query: (body) => ({ url: '/auth/coach-password-reset', method: 'POST', body }),
-    }),
-    requestCoachPasswordReset: builder.mutation<{ message: string }, { email: string }>({
-      query: (body) => ({ url: '/auth/coach-password-reset-request', method: 'POST', body }),
-    }),
   }),
 });
 
@@ -73,6 +67,4 @@ export const {
   useIssueCoachPasswordResetMutation,
   useValidateCoachInvitationMutation,
   useRegisterCoachMutation,
-  useResetCoachPasswordMutation,
-  useRequestCoachPasswordResetMutation,
 } = coachApi;

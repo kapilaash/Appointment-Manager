@@ -90,7 +90,7 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await expect(instructor.getByText('Your coach account is ready.')).toBeVisible();
 
   await instructor.goto('/forgot/coach', { waitUntil: 'domcontentloaded' });
-  await instructor.getByLabel('Coach account email').fill(instructorEmail);
+  await instructor.getByLabel('Account email').fill(instructorEmail);
   await instructor.getByRole('button', { name: 'Send reset link' }).click();
   await expect(instructor.getByRole('status')).toContainText('password reset instructions will be sent');
   await expect.poll(() => mailCount(adminPage), { timeout: 30_000 }).toBeGreaterThanOrEqual(initialMailCount + 2);

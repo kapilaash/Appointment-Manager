@@ -1,9 +1,10 @@
 FROM python:3.12-slim
 
+# Trust X-Forwarded-For only from the private proxy network (nginx/Caddy), never from the internet.
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=off \
-    PIP_DISABLE_PIP_VERSION_CHECK=on \n    # Trust X-Forwarded-For only from the private proxy network (nginx/Caddy), never from the internet.
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
     FORWARDED_ALLOW_IPS="127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
 
 WORKDIR /app

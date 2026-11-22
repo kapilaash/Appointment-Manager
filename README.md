@@ -143,6 +143,20 @@ Before production, choose a student-data retention period with the academy, veri
 
 See [docs/architecture.md](docs/architecture.md) for module boundaries, availability and concurrency decisions, status transitions, and known external setup. The API is versioned under `/api/v1`; health endpoints are `/health/live` and `/health/ready`.
 
+## Accounts and passwords
+
+- Passwords are stored only as Argon2 hashes; nobody, including administrators, can read them. Use a password manager to remember them.
+- New passwords need at least 12 characters and must not be on the built-in list of commonly leaked passwords or contain your email name (NIST SP 800-63B guidance; no forced expiry).
+- **Change password:** My profile → Password & security. Other devices are signed out and an email confirms the change.
+- **Forgot password (every role):** "Forgot your password?" on the sign-in page emails a one-time link valid for 30 minutes (Mailpit locally, Gmail in production). The reply is identical whether or not the email exists. The username is always the email address.
+- **Two-step sign-in (recommended for admins):** My profile → Password & security. Works with any authenticator app; ten single-use recovery codes cover a lost phone. Secrets are encrypted with a key derived from `SECRET_KEY` (rotating it requires users to set up two-step sign-in again).
+- **Emergency access** when email is down or every admin is locked out, run on the server:
+
+  ```powershell
+  docker compose exec -it backend python -m app.cli reset-password --email someone@example.com
+  docker compose exec -it backend python -m app.cli reset-mfa --email someone@example.com
+  ```
+
 ## Self-maintenance
 
 - **Data retention.** The worker runs a daily purge (03:17 UTC) that deletes finished background-job rows after `OUTBOX_RETENTION_DAYS` (30), failed ones after `FAILED_OUTBOX_RETENTION_DAYS` (90), and expired invitation/reset links after `ACCOUNT_TOKEN_RETENTION_DAYS` (30). Booking, notification and approval history are kept. Failures surface through the existing worker-failure alert.

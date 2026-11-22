@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { CalendarDays, CalendarPlus, ChevronDown, CircleHelp, ClipboardCheck, Clock3, Crown, GraduationCap, LayoutDashboard, LayoutGrid, LogOut, Palette, Settings, UserCircle, Users } from 'lucide-react';
+import { CalendarDays, CalendarPlus, ChevronDown, CircleHelp, ClipboardCheck, Clock3, Crown, GraduationCap, KeyRound, LayoutDashboard, LayoutGrid, LogOut, Palette, Settings, UserCircle, Users } from 'lucide-react';
 import { useLogoutMutation, useMeQuery } from '../../features/auth/api';
 import { ThemeProvider } from '../../features/appearance/ThemeContext';
 import { LoginPage } from '../../features/auth/LoginPage';
@@ -107,6 +107,7 @@ function AccountMenu({ name, email, role, onSignOut }: { name: string | undefine
           </div>
           <div className="pt-1.5">
             <Link role="menuitem" to="/profile" onClick={() => setOpen(false)} className={itemClass}><UserCircle size={16} aria-hidden="true" />My profile</Link>
+            <Link role="menuitem" to="/profile#security" onClick={() => setOpen(false)} className={itemClass}><KeyRound size={16} aria-hidden="true" />Password & security</Link>
             <Link role="menuitem" to="/settings" onClick={() => setOpen(false)} className={itemClass}><Palette size={16} aria-hidden="true" />Appearance & settings</Link>
             <button role="menuitem" type="button" onClick={() => { setOpen(false); onSignOut(); }} className={cn(itemClass, 'text-rose-700 hover:bg-rose-50 hover:text-rose-800 focus:bg-rose-50')}><LogOut size={16} aria-hidden="true" />Sign out</button>
           </div>

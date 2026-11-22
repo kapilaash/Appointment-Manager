@@ -12,6 +12,7 @@ const adminSteps: GuideStep[] = [
   { title: 'Match a client to a coach', description: 'Team availability shows every coach’s free and booked time for a day in the client’s time zone. Select a free block to start a booking with that coach.', to: '/team', action: 'Open team availability' },
   { title: 'Book a demo class', description: 'Choose an available coach and time, then add the student or parent contact email for updates.', to: '/book', action: 'Create a booking' },
   { title: 'Track changes and messages', description: 'Use the calendar for upcoming sessions. Appointment details show cancellation, reschedule, and email delivery history.', to: '/appointments', action: 'Open appointments' },
+  { title: 'Keep your account secure', description: 'Change your password or turn on two-step sign-in under Password & security. Forgot your password? Use “Forgot your password?” on the sign-in page; your username is your email address.', to: '/profile#security', action: 'Open password & security' },
 ];
 
 const coachSteps: GuideStep[] = [
@@ -20,6 +21,7 @@ const coachSteps: GuideStep[] = [
   { title: 'Need to move or cancel a demo?', description: 'Open the demo and choose Request reschedule or Request cancellation. The booking stays as it is until an administrator approves, and the family is only told after approval.', to: '/my-requests', action: 'See my requests' },
   { title: 'Review your classes', description: 'Open the calendar or appointments list to check student details, meeting links, and updates. You can mark an ended demo as completed.', to: '/calendar', action: 'View your calendar' },
   { title: 'Choose a comfortable workspace', description: 'Change the appearance theme at any time. Your choice is saved in this browser for your account.', to: '/settings', action: 'Open settings' },
+  { title: 'Keep your account secure', description: 'Change your password or turn on two-step sign-in under Password & security. Forgot your password? Use “Forgot your password?” on the sign-in page; your username is your email address.', to: '/profile#security', action: 'Open password & security' },
 ];
 
 function GuideCard({ step, index }: { step: GuideStep; index: number }) {

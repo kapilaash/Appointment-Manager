@@ -27,7 +27,7 @@ class AccountToken(Base, UUIDPrimaryKeyMixin):
 
     __table_args__ = (
         CheckConstraint(
-            "purpose in ('coach_invitation', 'coach_password_reset')",
+            "purpose in ('coach_invitation', 'coach_password_reset', 'password_reset')",
             name="account_token_purpose",
         ),
         Index("ix_account_tokens_purpose_email", "purpose", "email"),

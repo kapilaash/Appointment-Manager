@@ -57,6 +57,7 @@ export default defineConfig(({ mode }) => {
         'date-fns',
         'date-fns-tz',
         'lucide-react',
+        'qrcode-generator',
         'react-hook-form',
         'zod',
       ],

@@ -277,7 +277,7 @@ async def issue_password_reset(
     await db.execute(
         update(AccountToken)
         .where(
-            AccountToken.purpose == "coach_password_reset",
+            AccountToken.purpose.in_(("coach_password_reset", "password_reset")),
             AccountToken.user_id == user.id,
             AccountToken.consumed_at.is_(None),
             AccountToken.revoked_at.is_(None),
@@ -287,7 +287,7 @@ async def issue_password_reset(
     token, token_hash = issue_token()
     expires_at = now + timedelta(minutes=30)
     db.add(AccountToken(
-        purpose="coach_password_reset",
+        purpose="password_reset",
         token_hash=token_hash,
         email=user.email,
         user_id=user.id,
@@ -295,7 +295,7 @@ async def issue_password_reset(
         expires_at=expires_at,
     ))
     await db.commit()
-    reset_url = _one_time_url("/reset/coach", token)
+    reset_url = _one_time_url("/reset-password", token)
     email_sent = await _email_account_link(user.email, "coach_password_reset", reset_url)
     return {
         "email": user.email,

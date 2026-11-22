@@ -1,39 +1,11 @@
-import { expect, test, type APIRequestContext, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { adminEmail, adminPassword, api, createCoach, deactivateUser, isoDate, mailTo, signIn } from './support';
 
-const adminEmail = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'ChessTestAccount!2026';
 const coachPassword = 'Instructor!Test2026';
-const mailpit = process.env.MAILPIT_URL ?? 'http://127.0.0.1:8025';
 
-async function signIn(page: Page, email: string, password: string) {
-  page.setDefaultNavigationTimeout(90_000);
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await page.getByLabel('Email address').fill(email);
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByText('Academy workspace')).toBeVisible();
+async function subjectsTo(request: import('@playwright/test').APIRequestContext, address: string) {
+  return (await mailTo(request, address)).map((message) => message.Subject);
 }
-
-/** Mutating API calls need the CSRF token the server set as a cookie at sign-in. */
-async function csrfHeaders(context: BrowserContext) {
-  const token = (await context.cookies()).find((cookie) => cookie.name === 'csrf_token')?.value ?? '';
-  return { 'X-CSRF-Token': decodeURIComponent(token) };
-}
-
-async function api<T>(request: APIRequestContext, context: BrowserContext, method: 'GET' | 'POST' | 'PUT' | 'PATCH', url: string, data?: unknown, extraHeaders: Record<string, string> = {}): Promise<T> {
-  const response = await request.fetch(url, { method, data, headers: { ...(method === 'GET' ? {} : await csrfHeaders(context)), ...extraHeaders } });
-  expect(response.ok(), `${method} ${url} → ${response.status()} ${await response.text()}`).toBeTruthy();
-  return response.status() === 204 ? (undefined as T) : (await response.json() as T);
-}
-
-async function mailTo(request: APIRequestContext, address: string): Promise<string[]> {
-  const response = await request.get(`${mailpit}/api/v1/search`, { params: { query: `to:"${address}"` } });
-  if (!response.ok()) return [];
-  const data = await response.json() as { messages?: { Subject: string }[] };
-  return (data.messages ?? []).map((message) => message.Subject);
-}
-
-const isoDate = (offsetDays: number) => new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
 
 test('coach requests wait for an admin, who can reject with a note or approve; both sides are told', async ({ browser }) => {
   test.setTimeout(240_000);
@@ -45,18 +17,13 @@ test('coach requests wait for an admin, who can reject with a note or approve; b
   const adminContext = await browser.newContext();
   const admin = await adminContext.newPage();
   await signIn(admin, adminEmail, adminPassword);
+  await expect(admin.getByText('Academy workspace')).toBeVisible();
   let coachUserId = '';
 
   try {
     // --- Setup through the API: a coach with approved hours and one booked demo. ---
-    const invite = await api<{ registration_url: string }>(admin.request, adminContext, 'POST', '/api/v1/admin/coaches/invitations', { email: coachEmail });
-    // The token travels in the URL fragment so it never reaches server logs or referrers.
-    const token = new URLSearchParams(new URL(invite.registration_url).hash.slice(1)).get('token') ?? '';
     const coachContext = await browser.newContext();
-    const registered = await api<{ id: string }>(coachContext.request, coachContext, 'POST', '/api/v1/auth/coach-register', {
-      token, full_name: coachName, display_name: coachName, country_code: 'US', timezone: 'America/New_York', password: coachPassword,
-    });
-    coachUserId = registered.id;
+    coachUserId = await createCoach(admin, adminContext, coachContext, coachEmail, coachName, coachPassword);
     const coachProfile = (await api<{ id: string; user_id: string }[]>(admin.request, adminContext, 'GET', '/api/v1/instructors'))
       .find((item) => item.user_id === coachUserId);
     expect(coachProfile).toBeTruthy();
@@ -75,6 +42,7 @@ test('coach requests wait for an admin, who can reject with a note or approve; b
     // --- Coach: request time off and a demo cancellation in the UI. ---
     const coach = await coachContext.newPage();
     await signIn(coach, coachEmail, coachPassword);
+    await expect(coach.getByText('Academy workspace')).toBeVisible();
     await coach.getByRole('link', { name: 'Availability' }).click();
     await coach.getByLabel('Exception date').fill(isoDate(5));
     await coach.getByLabel('Reason').fill('Chess tournament');
@@ -92,7 +60,7 @@ test('coach requests wait for an admin, who can reject with a note or approve; b
     await expect(demo.getByText('Confirmed')).toBeVisible(); // nothing changes until approval
 
     // Every active admin is emailed about new requests.
-    await expect.poll(async () => (await mailTo(admin.request, adminEmail)).filter((subject) => subject.includes(coachName)).length, { timeout: 45_000 }).toBeGreaterThanOrEqual(2);
+    await expect.poll(async () => (await subjectsTo(admin.request, adminEmail)).filter((subject) => subject.includes(coachName)).length, { timeout: 45_000 }).toBeGreaterThanOrEqual(2);
 
     // --- Admin: reject the time off with a note, approve the cancellation. ---
     await admin.getByRole('link', { name: /^Approvals/ }).click();
@@ -120,7 +88,7 @@ test('coach requests wait for an admin, who can reject with a note or approve; b
     await coach.reload();
     await expect(coach.getByRole('article').filter({ hasText: studentName }).getByText('Cancelled', { exact: true })).toBeVisible();
 
-    await expect.poll(async () => await mailTo(admin.request, coachEmail), { timeout: 45_000 })
+    await expect.poll(async () => await subjectsTo(admin.request, coachEmail), { timeout: 45_000 })
       .toEqual(expect.arrayContaining([
         'Your request was not approved: Time off or extra hours',
         'Your request was approved: Demo cancellation',
@@ -128,9 +96,7 @@ test('coach requests wait for an admin, who can reject with a note or approve; b
     await coachContext.close();
   } finally {
     // Never leave a bookable test coach behind, even if an assertion failed.
-    if (coachUserId) {
-      await admin.request.patch(`/api/v1/admin/coaches/${coachUserId}/active`, { data: { active: false }, headers: await csrfHeaders(adminContext) });
-    }
+    if (coachUserId) await deactivateUser(admin, adminContext, coachUserId);
     await adminContext.close();
   }
 });

@@ -27,6 +27,6 @@ export const baseApi = createApi({
   // Several staff edit the same schedule: when a page is revisited, refresh data older than 10 seconds
   // so changes made by others (approvals, bookings) appear without a manual reload.
   refetchOnMountOrArgChange: 10,
-  tagTypes: ['Auth', 'Coaches', 'Instructor', 'Instructors', 'Availability', 'Appointment', 'Appointments', 'Student', 'Students', 'Dashboard', 'DashboardStats', 'ChangeRequests'],
+  tagTypes: ['Auth', 'Coaches', 'Instructor', 'Instructors', 'Availability', 'Appointment', 'Appointments', 'Student', 'Students', 'Dashboard', 'DashboardStats', 'ChangeRequests', 'Security'],
   endpoints: () => ({}),
 });

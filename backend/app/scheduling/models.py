@@ -181,6 +181,8 @@ class NotificationEvent(Base, UUIDPrimaryKeyMixin):
     # Exactly one of appointment_id / change_request_id identifies what the message is about.
     appointment_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("appointments.id", ondelete="CASCADE"), nullable=True, index=True)
     change_request_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("change_requests.id", ondelete="CASCADE"), nullable=True, index=True)
+    # Account security notices (password changed, two-step sign-in on/off) concern a user, not a booking.
+    user_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     event_type: Mapped[str] = mapped_column(String(60), nullable=False)
     event_key: Mapped[str] = mapped_column(String(36), nullable=False)
     recipient: Mapped[str] = mapped_column(String(320), nullable=False)
@@ -193,7 +195,7 @@ class NotificationEvent(Base, UUIDPrimaryKeyMixin):
     __table_args__ = (
         Index("uq_notification_event_recipient", "event_key", "recipient", unique=True),
         CheckConstraint(
-            "(appointment_id IS NULL) <> (change_request_id IS NULL)",
+            "num_nonnulls(appointment_id, change_request_id, user_id) = 1",
             name=conv("ck_notification_events_subject"),
         ),
     )

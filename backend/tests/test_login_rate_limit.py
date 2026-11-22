@@ -169,8 +169,11 @@ async def test_valid_credentials_can_recover_an_email_limited_account(monkeypatc
         id=uuid4(),
         email="coach@example.com",
         password_hash="not-used-by-test",
+        full_name="Coach",
         role=UserRole.ADMIN,
         is_active=True,
+        theme_preference=None,
+        mfa_enabled=False,
         instructor_profile=None,
     )
     monkeypatch.setattr(auth_routes, "get_redis_client", lambda: redis)
@@ -191,7 +194,7 @@ async def test_valid_credentials_can_recover_an_email_limited_account(monkeypatc
         FakeDatabase(user),
     )
 
-    assert result is user
+    assert result.email == user.email and result.id == user.id
     state = await get_login_failure_state(redis, "192.0.2.3", "coach@example.com")
     assert state.email_failures == 0
     assert "chess_session_id=session-value" in response.headers["set-cookie"]

@@ -11,6 +11,7 @@ from arq.cron import cron
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
+from app.auth.notices import ACCOUNT_EVENT_PREFIX, account_notice_email
 from app.core.config import settings
 from app.core.mailer import build_message, send_message
 from app.db.session import AsyncSessionLocal
@@ -115,7 +116,8 @@ async def _send_once(
     body: str,
     event_key: str,
     event_type: str,
-    change_request_id: Any,
+    change_request_id: Any = None,
+    user_id: Any = None,
 ) -> None:
     """Send one message per (outbox event, recipient), surviving worker retries."""
     record_query = select(NotificationEvent).where(
@@ -128,6 +130,7 @@ async def _send_once(
     if record is None:
         record = NotificationEvent(
             change_request_id=change_request_id,
+            user_id=user_id,
             event_type=event_type,
             event_key=event_key,
             recipient=address,
@@ -192,6 +195,17 @@ async def _deliver_change_request_event(db: Any, *, event_key: str, event_type: 
         )
 
 
+async def _deliver_account_event(db: Any, *, event_key: str, event_type: str, user_id: Any) -> None:
+    """Security notices go to the account owner only, even if the account was since deactivated."""
+    user = await db.get(User, user_id)
+    if user is None:
+        return
+    subject, body = account_notice_email(
+        event_type, name=user.full_name, reset_url=f"{settings.FRONTEND_URL.rstrip('/')}/forgot-password",
+    )
+    await _send_once(db, address=user.email, subject=subject, body=body, event_key=event_key, event_type=event_type, user_id=user.id)
+
+
 async def _process_outbox(ctx: dict[str, Any]) -> int:
     processed = 0
     for _ in range(25):
@@ -219,7 +233,9 @@ async def _process_outbox(ctx: dict[str, Any]) -> int:
                 appointment_id = event.aggregate_id
                 event_payload = dict(event.payload)
             try:
-                if event_type.startswith(cr.CHANGE_REQUEST_EVENT_PREFIX):
+                if event_type.startswith(ACCOUNT_EVENT_PREFIX):
+                    await _deliver_account_event(db, event_key=event_key, event_type=event_type, user_id=appointment_id)
+                elif event_type.startswith(cr.CHANGE_REQUEST_EVENT_PREFIX):
                     await _deliver_change_request_event(
                         db, event_key=event_key, event_type=event_type, request_id=appointment_id,
                     )

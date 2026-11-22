@@ -15,6 +15,7 @@ from app.observability.error_tracking import configure_error_tracking
 configure_error_tracking()
 
 from app.admin.routes import router as coach_admin_router
+from app.auth.account_routes import router as account_router
 from app.auth.routes import router as auth_router
 from app.auth.session_store import close_redis_client, get_redis_client
 from app.core.logging import setup_logging
@@ -88,6 +89,7 @@ app.add_middleware(
 
 # Register API v1 modules
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(account_router, prefix="/api/v1")
 app.include_router(coach_admin_router, prefix="/api/v1")
 app.include_router(scheduling_router)
 app.include_router(change_requests_router)

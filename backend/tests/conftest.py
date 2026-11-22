@@ -1,4 +1,4 @@
-"""Shared fixtures for tests that need a real PostgreSQL database.
+"""Shared fixtures for tests that need real PostgreSQL (and, for some, Redis).
 
 Set TEST_DATABASE_URL to a database whose name ends with ``_test``; those tests are
 skipped otherwise. Each test module gets a freshly created schema.
@@ -6,6 +6,10 @@ skipped otherwise. Each test module gets a freshly created schema.
 
 import os
 from collections.abc import AsyncIterator
+
+# Tests never touch the development Redis data: use a dedicated database number.
+# Set before any app module reads settings.
+os.environ["REDIS_URL"] = os.environ.get("TEST_REDIS_URL", "redis://127.0.0.1:6379/15")
 
 import pytest
 from sqlalchemy import create_engine, text
