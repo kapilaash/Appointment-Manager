@@ -19,6 +19,8 @@ from app.auth.tokens import issue_token
 from app.core.config import settings
 from app.core.mailer import build_message, send_message
 from app.db.session import get_db_session
+from app.scheduling import change_requests as cr
+from app.scheduling.models import ChangeRequest
 from app.users.models import User, UserRole
 
 router = APIRouter(prefix="/admin/coaches", tags=["Coach administration"])
@@ -190,6 +192,14 @@ async def set_coach_active(
     if user is None:
         raise HTTPException(status_code=404, detail="Coach account not found")
     user.is_active = data.active
+    if not data.active and user.instructor_profile is not None:
+        # A deactivated coach can no longer follow up, so close their open requests
+        # instead of leaving them in the approval queue forever.
+        await db.execute(
+            update(ChangeRequest)
+            .where(ChangeRequest.instructor_id == user.instructor_profile.id, ChangeRequest.status == cr.PENDING)
+            .values(status=cr.WITHDRAWN, review_note="Closed automatically: the coach account was deactivated.", updated_at=datetime.now(UTC))
+        )
     await db.commit()
     if not data.active:
         try:

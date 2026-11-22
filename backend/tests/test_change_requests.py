@@ -368,3 +368,21 @@ async def test_team_overview_shows_free_and_booked_time_in_the_viewers_zone(worl
         {"start": at(11), "end": at(18, 30)},
     ]
     assert (await client.get("/api/v1/availability/overview", params={"day": str(world.demo_day), "timezone": "Mars/Base"})).status_code == 422
+
+
+async def test_deactivating_a_coach_closes_their_open_requests(world, client, monkeypatch) -> None:
+    from app.admin import routes as admin_routes
+
+    async def no_sessions(_user_id) -> None:
+        return None
+
+    monkeypatch.setattr(admin_routes.SessionStore, "destroy_user_sessions", no_sessions)
+    act_as(world, world.coach_user)
+    request_id = (await client.put(f"/api/v1/instructors/{world.coach.id}/availability", json=NEW_RULES)).json()["request_id"]
+
+    act_as(world, world.admin)
+    response = await client.patch(f"/api/v1/admin/coaches/{world.coach_user.id}/active", json={"active": False})
+    assert response.status_code == 200, response.text
+    item = await request_row(world, request_id)
+    assert item.status == cr.WITHDRAWN
+    assert "deactivated" in (item.review_note or "")

@@ -24,6 +24,9 @@ export const baseApi = createApi({
   }),
   // Refresh visible data after the network comes back or the tab regains focus (listeners in store/index.ts).
   refetchOnReconnect: true,
+  // Several staff edit the same schedule: when a page is revisited, refresh data older than 10 seconds
+  // so changes made by others (approvals, bookings) appear without a manual reload.
+  refetchOnMountOrArgChange: 10,
   tagTypes: ['Auth', 'Coaches', 'Instructor', 'Instructors', 'Availability', 'Appointment', 'Appointments', 'Student', 'Students', 'Dashboard', 'DashboardStats', 'ChangeRequests'],
   endpoints: () => ({}),
 });
