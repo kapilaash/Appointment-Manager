@@ -15,6 +15,7 @@ const coach = {
 
 async function mockWorkspace(page: import('@playwright/test').Page, user: typeof admin | typeof coach) {
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: user }));
+  await page.route('**/api/v1/change-requests/pending-count', (route) => route.fulfill({ json: { pending: 0 } }));
   await page.route('**/api/v1/settings', (route) => route.fulfill({
     json: { demo_duration_minutes: 60, slot_interval_minutes: 30, buffer_before_minutes: 0, buffer_after_minutes: 0 },
   }));

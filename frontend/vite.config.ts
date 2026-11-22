@@ -64,6 +64,8 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       port: 5173,
       allowedHosts: ['frontend'],
+      // Docker bind mounts on Windows/macOS do not forward file events; poll there so edits reload.
+      ...(env.VITE_USE_POLLING === 'true' ? { watch: { usePolling: true, interval: 1000, ignored: ['**/node_modules/**', '**/.git/**', '**/.npm-cache/**', '**/test-results/**', '**/playwright-report/**', '**/dist/**', '**/e2e/**'] } } : {}),
       warmup: {
         clientFiles: [
           './index.html',
