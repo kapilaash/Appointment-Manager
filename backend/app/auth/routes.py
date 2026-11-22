@@ -212,7 +212,7 @@ async def update_my_preferences(
 async def validate_coach_invitation(
     payload: CoachInvitationTokenIn,
     db: AsyncSession = Depends(get_db_session),
-) -> AccountToken:
+) -> dict[str, object]:
     now = datetime.now(UTC)
     token = await db.scalar(select(AccountToken).where(
         AccountToken.token_hash == token_digest(payload.token),

@@ -2,12 +2,13 @@ import logging
 import sys
 
 import structlog
+from structlog.types import Processor
 
 from app.core.config import settings
 
 
 def setup_logging() -> None:
-    shared_processors = [
+    shared_processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),

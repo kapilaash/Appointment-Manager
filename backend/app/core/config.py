@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     UPTIME_API_HEARTBEAT_URL: str = ""
     UPTIME_WORKER_HEARTBEAT_URL: str = ""
     UPTIME_HEARTBEAT_INTERVAL_SECONDS: int = Field(default=60, ge=15, le=3600)
+    # Daily housekeeping: how long finished background work and expired links are kept.
+    OUTBOX_RETENTION_DAYS: int = Field(default=30, ge=1, le=3650)
+    FAILED_OUTBOX_RETENTION_DAYS: int = Field(default=90, ge=1, le=3650)
+    ACCOUNT_TOKEN_RETENTION_DAYS: int = Field(default=30, ge=1, le=3650)
 
     DATABASE_URL: str = "postgresql+asyncpg://chess_admin:chess_secure_pass_2025@localhost:5432/chess_academy"
     # Log every SQL statement; noisy and memory-hungry, so opt-in for debugging only.

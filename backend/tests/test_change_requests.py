@@ -5,7 +5,6 @@ row locks and JSONB are Postgres features). Set TEST_DATABASE_URL to a database 
 name ends with ``_test``; the tests are skipped otherwise.
 """
 
-import os
 from collections.abc import AsyncIterator
 from datetime import UTC, date, datetime, time, timedelta
 from types import SimpleNamespace
@@ -14,14 +13,12 @@ from uuid import uuid4
 import httpx
 import pytest
 from fastapi import Depends
-from sqlalchemy import create_engine, select, text
-from sqlalchemy.engine import make_url
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from app.auth.dependencies import get_current_user
-from app.db.base import Base
 from app.db.session import get_db_session
 from app.main import app
 from app.scheduling import change_requests as cr
@@ -35,39 +32,6 @@ from app.scheduling.models import (
 )
 from app.users.models import Instructor, User, UserRole
 from app.workers import main as worker
-
-
-@pytest.fixture(scope="module")
-def database_url() -> str:
-    url = os.getenv("TEST_DATABASE_URL")
-    if not url:
-        pytest.skip("TEST_DATABASE_URL is not configured")
-    if not (make_url(url).database or "").endswith("_test"):
-        pytest.fail("Refusing to modify a database whose name does not end with _test")
-    sync_engine = create_engine(make_url(url).set(drivername="postgresql+psycopg"))
-    with sync_engine.begin() as connection:
-        connection.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))
-    Base.metadata.drop_all(sync_engine)
-    Base.metadata.create_all(sync_engine)
-    with sync_engine.begin() as connection:
-        connection.execute(text("""
-            ALTER TABLE appointments ADD CONSTRAINT ex_appointments_instructor_occupied
-            EXCLUDE USING gist (
-                instructor_id WITH =,
-                tstzrange(occupied_from, occupied_until, '[)') WITH &&
-            ) WHERE (status = 'confirmed')
-        """))
-    yield url
-    Base.metadata.drop_all(sync_engine)
-    sync_engine.dispose()
-
-
-@pytest.fixture
-async def sessions(database_url: str) -> AsyncIterator[async_sessionmaker[AsyncSession]]:
-    engine = create_async_engine(make_url(database_url).set(drivername="postgresql+asyncpg"))
-    maker = async_sessionmaker(engine, expire_on_commit=False)
-    yield maker
-    await engine.dispose()
 
 
 @pytest.fixture

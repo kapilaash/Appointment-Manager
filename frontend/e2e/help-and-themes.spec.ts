@@ -101,6 +101,16 @@ test('the saved theme is painted before the app loads, so there is no light flas
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#09090b');
 });
 
+test('going offline shows a clear banner that clears itself on reconnect', async ({ page, context }) => {
+  await mockWorkspace(page, admin);
+  await page.goto('/help', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Administrator guide' })).toBeVisible();
+  await context.setOffline(true);
+  await expect(page.getByText(/You’re offline/)).toBeVisible();
+  await context.setOffline(false);
+  await expect(page.getByText(/You’re offline/)).toBeHidden();
+});
+
 test('coaches receive coach guidance and only their permitted pages in mobile navigation', async ({ page }) => {
   await mockWorkspace(page, coach);
   await page.goto('/help', { waitUntil: 'domcontentloaded' });

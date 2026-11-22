@@ -22,6 +22,8 @@ export const baseApi = createApi({
       return headers;
     },
   }),
+  // Refresh visible data after the network comes back or the tab regains focus (listeners in store/index.ts).
+  refetchOnReconnect: true,
   tagTypes: ['Auth', 'Coaches', 'Instructor', 'Instructors', 'Availability', 'Appointment', 'Appointments', 'Student', 'Students', 'Dashboard', 'DashboardStats', 'ChangeRequests'],
   endpoints: () => ({}),
 });

@@ -1,6 +1,7 @@
 import hashlib
+from collections.abc import Awaitable
 from datetime import UTC, date, datetime, time, timedelta
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlsplit
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -342,7 +343,7 @@ async def apply_weekly_rules(db: AsyncSession, coach: Instructor, rules: list[Ru
         windows = actual_windows(local_day, coach.timezone, rules, existing_exceptions)  # type: ignore[arg-type]
         if not any(w.start <= appointment.occupied_from and appointment.occupied_until <= w.end for w in windows):
             affected.append(str(appointment.id))
-    await db.execute(AvailabilityRule.__table__.delete().where(AvailabilityRule.instructor_id == coach.id))
+    await db.execute(delete(AvailabilityRule).where(AvailabilityRule.instructor_id == coach.id))
     db.add_all([AvailabilityRule(instructor_id=coach.id, **rule.model_dump()) for rule in rules])
     return affected
 
@@ -589,12 +590,13 @@ async def _enforce_public_rate_limit(request: Request, *, scope: str, limit: int
     digest = hashlib.sha256(client_id.encode("utf-8")).hexdigest()
     redis = get_redis_client()
     try:
-        count = await redis.eval(
+        # The asyncio client always returns an awaitable; redis-py's shared stubs also allow str.
+        count = await cast("Awaitable[int]", redis.eval(
             "local n = redis.call('INCR', KEYS[1]); if n == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]); end; return n",
             1,
             f"public-booking:{scope}:{digest}",
-            window_seconds,
-        )
+            str(window_seconds),
+        ))
     except RedisError as exc:
         raise HTTPException(503, "Booking is temporarily unavailable. Please try again shortly.") from exc
     if int(count) > limit:
@@ -839,10 +841,10 @@ async def _create_booking(data: BookingIn, idempotency_key: str, creator_id: UUI
     owner_filter = Appointment.created_by == creator_id if creator_id is not None else Appointment.created_by.is_(None)
     existing = await db.scalar(select(Appointment).where(owner_filter, Appointment.idempotency_key == idempotency_key))
     if existing:
-        existing = await db.scalar(
+        with_student = await db.scalar(
             select(Appointment).options(selectinload(Appointment.student)).where(Appointment.id == existing.id)
         )
-        return await _appointment_out(db, existing)
+        return await _appointment_out(db, with_student or existing)
     coach = await db.scalar(
         select(Instructor)
         .join(User, User.id == Instructor.user_id)

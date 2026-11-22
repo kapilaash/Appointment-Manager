@@ -10,6 +10,7 @@ import { Button } from '../ui/Button';
 import { PageSkeleton } from '../ui/Skeleton';
 import { ToastProvider } from '../ui/Toast';
 import { MobileWorkspaceNav } from './MobileWorkspaceNav';
+import { OfflineBanner } from './OfflineBanner';
 
 const adminLinks = [
   { to: '/', label: 'Overview', icon: LayoutDashboard },
@@ -162,6 +163,7 @@ export function App() {
     <ThemeProvider userId={user.id} savedPreference={user.theme_preference}>
       <ToastProvider>
         <div className="theme-canvas min-h-screen bg-slate-50">
+          <OfflineBanner />
           <a href="#main-content" className="sr-only z-50 rounded-md bg-surface p-3 text-indigo-700 focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:shadow-lg">Skip to main content</a>
           <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col overflow-y-auto border-r border-slate-200 bg-surface lg:flex">
             <Link to="/" className="flex h-[76px] items-center gap-3 border-b border-slate-100 px-6">

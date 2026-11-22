@@ -1,6 +1,8 @@
 # Thirumal Chess Academy
 
-The active application provides staff sign-in, administrator-managed coach accounts, coach profiles and individual weekly availability, date-specific exceptions, and an administrator booking flow. Admins can book a coach with student or parent contact details; a durable outbox queues notifications and keeps appointment search in Meilisearch in sync with PostgreSQL. Coaches can edit their own profile, country and IANA time zone, weekly availability, and exceptions. Studio, Classic Chess, and Black & White appearance themes and role-specific Help & guides are included. Existing bookings are preserved when schedules change.
+The active application provides staff sign-in, administrator-managed coach accounts, coach profiles and individual weekly availability, date-specific exceptions, and an administrator booking flow. Admins can book a coach with student or parent contact details; a durable outbox queues notifications and keeps appointment search in Meilisearch in sync with PostgreSQL. Coaches edit their own profile and meeting link directly. Every coach change that affects bookings (weekly hours, time off, extra hours, time zone/country, and requests to cancel or reschedule a demo) becomes a **change request** that takes effect only after an administrator approves it on **Approvals**; all active admins are emailed when a request arrives and the coach is emailed the decision. Admins' own changes apply immediately. **Team availability** shows every coach's free and booked time for a day in any time zone (typically the client's), and a free block opens a pre-filled booking. Existing bookings are preserved when schedules change.
+
+Appearance themes (Studio, Classic Chess, Black & White, and Match my device) are saved to each account, so they follow the user across devices. Theme changes cross-fade slowly (700 ms, via the View Transitions API) and respect the reduced-motion setting; the saved theme is applied before the first paint, so there is no light flash on load. Role-specific Help & guides are included.
 
 ## Run locally with Docker
 
@@ -106,11 +108,12 @@ Meeting URLs must use HTTPS. The coach's default is copied onto new bookings unl
 ```powershell
 cd backend
 python -m compileall -q app alembic tests
-ruff check app alembic
+ruff check app alembic tests
+mypy app
 pytest
 ```
 
-The PostgreSQL concurrency test uses only a dedicated database whose name ends in `_test`; set `TEST_DATABASE_URL` accordingly. The test intentionally refuses other database names.
+PostgreSQL-backed tests (approval workflow, team availability, data retention, booking concurrency) use only a dedicated database whose name ends in `_test`; set `TEST_DATABASE_URL` accordingly, for example `postgresql+psycopg://USER:PASSWORD@127.0.0.1:5432/chess_academy_test`. Use `127.0.0.1` rather than `localhost` on Windows. The tests refuse other database names.
 
 ```powershell
 cd frontend
@@ -121,7 +124,7 @@ npm run build
 npm run test:e2e
 ```
 
-The Playwright workflow expects the development services, migrations, an administrator created with `seed-admin`, and the ARQ notification worker. GitHub Actions configures these services and runs the full browser scenario. CI also audits installed Python dependencies and the npm dependency tree; Dependabot checks Python, npm, Docker images, and GitHub Actions updates weekly.
+Against the Docker stack, run `PLAYWRIGHT_BASE_URL=http://127.0.0.1:5173 E2E_ADMIN_EMAIL=... E2E_ADMIN_PASSWORD=... npm run test:e2e`. The Playwright workflow expects the development services, migrations, an administrator created with `seed-admin`, and the ARQ notification worker. GitHub Actions configures these services and runs the full browser scenario. CI also audits installed Python dependencies and the npm dependency tree; Dependabot checks Python, npm, Docker images, and GitHub Actions updates weekly.
 
 ## Production outline
 
@@ -139,3 +142,11 @@ Before production, choose a student-data retention period with the academy, veri
 ## Architecture and status
 
 See [docs/architecture.md](docs/architecture.md) for module boundaries, availability and concurrency decisions, status transitions, and known external setup. The API is versioned under `/api/v1`; health endpoints are `/health/live` and `/health/ready`.
+
+## Self-maintenance
+
+- **Data retention.** The worker runs a daily purge (03:17 UTC) that deletes finished background-job rows after `OUTBOX_RETENTION_DAYS` (30), failed ones after `FAILED_OUTBOX_RETENTION_DAYS` (90), and expired invitation/reset links after `ACCOUNT_TOKEN_RETENTION_DAYS` (30). Booking, notification and approval history are kept. Failures surface through the existing worker-failure alert.
+- **New releases.** Browser tabs opened before a deploy reload once automatically if they request a code file the new release removed.
+- **Network drops.** An offline banner explains why saving is paused, and data refreshes on its own when the connection returns.
+- **Error tracking.** Sentry's browser code is downloaded only when `VITE_SENTRY_DSN` is set.
+- **Docker on Windows/macOS.** `VITE_USE_POLLING=true` (set in `docker-compose.yml`) makes the Vite dev server notice file edits through bind mounts.

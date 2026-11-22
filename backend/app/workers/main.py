@@ -24,6 +24,7 @@ from app.scheduling.models import Appointment, ChangeRequest, NotificationEvent,
 from app.search.indexing import rebuild_appointment_index, sync_appointment
 from app.search.meili import SEARCH_EVENT_TYPE, ensure_appointment_index
 from app.users.models import Instructor, User, UserRole
+from app.workers.maintenance import run_purge
 from app.workers.metrics import (
     record_worker_failure,
     record_worker_success,
@@ -535,13 +536,27 @@ async def worker_shutdown(ctx: dict[str, Any]) -> None:
     await stop_worker_metrics(ctx)
 
 
+async def purge_expired_records(ctx: dict[str, Any]) -> dict[str, int]:
+    """Daily housekeeping; failures surface through the existing worker failure alerts."""
+    try:
+        removed = await run_purge(ctx)
+    except Exception as exc:
+        record_worker_failure("maintenance_purge")
+        capture_exception(exc)
+        raise
+    record_worker_success("maintenance_purge")
+    return removed
+
+
 class WorkerSettings:
-    functions: ClassVar[list] = [process_outbox, process_search_outbox]
+    functions: ClassVar[list] = [process_outbox, process_search_outbox, purge_expired_records]
     on_startup = worker_startup
     on_shutdown = worker_shutdown
     cron_jobs: ClassVar[list] = [
         cron(process_outbox, second={0, 15, 30, 45}, run_at_startup=True),
         cron(process_search_outbox, second=set(range(0, 60, 3)), run_at_startup=True),
+        # Quiet hour for most users; a missed run simply catches up the next day.
+        cron(purge_expired_records, hour={3}, minute={17}, second={0}),
     ]
     redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
     max_jobs = 2
