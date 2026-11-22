@@ -78,7 +78,8 @@ test('login remains usable on a phone viewport with keyboard navigation', async 
 test('coach defaults, meeting links, search, calendar actions, deletion, and deactivation work end to end', async ({
   browser,
 }) => {
-  test.setTimeout(180_000);
+  // The longest journey in the suite: registration, approvals, booking, calendar, cleanup.
+  test.setTimeout(300_000);
   const admin = await browser.newContext();
   const adminPage = await admin.newPage();
   await signIn(adminPage, adminEmail, adminPassword);
@@ -154,6 +155,9 @@ test('coach defaults, meeting links, search, calendar actions, deletion, and dea
   await adminPage.getByRole('link', { name: /^Approvals/ }).click();
   const weeklyRequest = adminPage.getByRole('article', { name: `Weekly availability change from ${instructorName}` });
   await expect(weeklyRequest).toBeVisible({ timeout: 30_000 });
+  // Regression check: every one of the coach's 7 quick "Add hours" clicks reached the request.
+  // A new coach is unavailable on all 7 days now, and requested hours on all 7 days.
+  await expect(weeklyRequest.getByText('Unavailable', { exact: true })).toHaveCount(7);
   await weeklyRequest.getByRole('button', { name: 'Approve' }).click();
   await expect(adminPage.getByText(/^Approved: weekly availability change/)).toBeVisible();
   await expect(weeklyRequest).toHaveCount(0);

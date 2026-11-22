@@ -28,6 +28,18 @@ async function open(page: Page, path: string, ready: string, theme: string) {
   await page.evaluate(() => document.fonts.ready);
 }
 
+// Compile every page once before measuring anything, so a cold dev server cannot time out a check.
+test.beforeAll(async ({ browser }) => {
+  test.setTimeout(240_000);
+  const page = await browser.newPage();
+  await mockApi(page);
+  for (const { path, ready } of pages) {
+    await page.goto(path);
+    await expect(page.getByText(ready, { exact: false }).first()).toBeVisible({ timeout: 120_000 });
+  }
+  await page.close();
+});
+
 async function seriousViolations(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   return results.violations

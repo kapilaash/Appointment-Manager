@@ -81,10 +81,22 @@ export function AvailabilityPage() {
   );
 
   // Load the saved schedule and zone into the editors whenever fresh server data arrives.
-  const [loadedAvailability, setLoadedAvailability] = useState(availability.currentData);
-  if (availability.currentData && availability.currentData !== loadedAvailability) {
-    setLoadedAvailability(availability.currentData);
-    setRules(availability.currentData.rules.map((rule) => ({ ...rule })));
+  // Load the saved hours into the editor when they actually change on the server or another coach
+  // is selected — but never throw away edits the user has not saved yet.
+  const [hasUnsavedRules, setHasUnsavedRules] = useState(false);
+  const serverRulesKey = availability.currentData
+    ? `${instructorId}|${JSON.stringify(availability.currentData.rules)}`
+    : null;
+  const [loadedRulesKey, setLoadedRulesKey] = useState<string | null>(null);
+  const [loadedRulesFor, setLoadedRulesFor] = useState<string | undefined>(undefined);
+  if (availability.currentData && serverRulesKey !== loadedRulesKey) {
+    const switchedCoach = loadedRulesFor !== instructorId;
+    if (switchedCoach || !hasUnsavedRules) {
+      setRules(availability.currentData.rules.map((rule) => ({ ...rule })));
+      setHasUnsavedRules(false);
+    }
+    setLoadedRulesKey(serverRulesKey);
+    setLoadedRulesFor(instructorId);
   }
   const zoneKey = instructorTimezone ? `${instructorId}|${instructorTimezone}|${instructorCountryCode ?? ''}` : null;
   const [loadedZoneKey, setLoadedZoneKey] = useState<string | null>(null);
@@ -98,20 +110,25 @@ export function AvailabilityPage() {
   const rulesFor = (day: number) =>
     rules.map((rule, index) => ({ rule, index })).filter(({ rule }) => rule.day_of_week === day);
 
+  // Functional updates: each change builds on the latest list, so quick successive clicks
+  // (or a double-click) can never overwrite one another.
+  function changeRules(update: (current: AvailabilityRule[]) => AvailabilityRule[]) {
+    setRules(update);
+    setHasUnsavedRules(true);
+  }
   function addRule(day: number) {
-    setRules([...rules, { ...blank, day_of_week: day }]);
+    changeRules((current) => [...current, { ...blank, day_of_week: day }]);
   }
   function editRule(index: number, key: 'start_local_time' | 'end_local_time', value: string) {
-    setRules(rules.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
+    changeRules((current) => current.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
   }
   function removeRule(index: number) {
-    setRules(rules.filter((_item, i) => i !== index));
+    changeRules((current) => current.filter((_item, i) => i !== index));
   }
   function copyPreviousDay(day: number) {
-    const previous = rules.filter((rule) => rule.day_of_week === day - 1);
-    setRules([
-      ...rules.filter((rule) => rule.day_of_week !== day),
-      ...previous.map((rule) => ({ ...rule, day_of_week: day })),
+    changeRules((current) => [
+      ...current.filter((rule) => rule.day_of_week !== day),
+      ...current.filter((rule) => rule.day_of_week === day - 1).map((rule) => ({ ...rule, day_of_week: day })),
     ]);
   }
 
@@ -124,6 +141,7 @@ export function AvailabilityPage() {
         rules,
         ...(needsApproval && note.trim() ? { note: note.trim() } : {}),
       }).unwrap();
+      setHasUnsavedRules(false);
       if (isPendingReceipt(result)) {
         setNote('');
         notify(
@@ -346,7 +364,7 @@ export function AvailabilityPage() {
                   <Button
                     variant="secondary"
                     className="px-3 py-2 text-xs"
-                    onClick={() => setRules((pendingWeekly.payload.rules ?? []).map((rule) => ({ ...rule })))}
+                    onClick={() => changeRules(() => (pendingWeekly.payload.rules ?? []).map((rule) => ({ ...rule })))}
                   >
                     Edit proposed hours
                   </Button>
