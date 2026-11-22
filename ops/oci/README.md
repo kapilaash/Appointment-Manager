@@ -65,4 +65,14 @@ After deployment, schedule the script once a day from the VM's crontab. Replace 
 15 2 * * * /bin/sh /srv/chess-academy/ops/oci/backup-postgres.sh >> /var/log/chess-academy-backup.log 2>&1
 ```
 
-Keep an encrypted copy outside the VM, restrict access to both the dump and logs, and periodically restore a dump into a disposable database. Backups contain student and family contact information, so treat them as private records.
+Keep an encrypted copy outside the VM and restrict access to both the dump and logs. Backups contain student and family contact information, so treat them as private records.
+
+### Prove the backups restore
+
+A backup is only useful if it restores. `ops/oci/verify-backup.sh` loads the newest dump into a throwaway, network-isolated PostgreSQL container, checks the migration version, the core tables and that an active administrator exists, prints a summary, and always deletes the container. It exits non-zero on any problem. Schedule it shortly after the nightly backup:
+
+```cron
+45 2 * * * BACKUP_VERIFY_HEARTBEAT_URL=https://your-dead-man-monitor/ping /bin/sh /srv/chess-academy/ops/oci/verify-backup.sh >> /var/log/chess-academy-backup.log 2>&1
+```
+
+With `BACKUP_VERIFY_HEARTBEAT_URL` set (for example a free healthchecks.io check), you are alerted if verification stops running or starts failing. Run it by hand with a specific file: `sh ops/oci/verify-backup.sh .backups/chess_academy-YYYYMMDDTHHMMSSZ.dump`.
