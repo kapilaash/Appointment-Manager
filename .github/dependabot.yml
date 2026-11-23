@@ -13,7 +13,8 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
 
-  - package-ecosystem: docker
+  # The repo root has Compose files, not a Dockerfile; keep their service images current.
+  - package-ecosystem: docker-compose
     directory: /
     schedule:
       interval: weekly
