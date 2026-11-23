@@ -24,7 +24,7 @@ services:
       retries: 12
 
   redis:
-    image: redis:7.2-alpine
+    image: redis:8.10-alpine
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD}"]
     environment:
