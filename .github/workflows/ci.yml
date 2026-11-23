@@ -47,7 +47,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.13.9"
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v3
       - name: Build backend image
         uses: docker/build-push-action@v6
@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -114,7 +114,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -190,7 +190,7 @@ jobs:
       E2E_ADMIN_PASSWORD: ChessTestAccount!2026
       CORS_ORIGINS: '["http://127.0.0.1:5173"]'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.13.9"
@@ -222,7 +222,7 @@ jobs:
       GRAFANA_ADMIN_PASSWORD: ci-only-grafana-password
       ALERT_EMAIL_TO: alerts@example.test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker compose -f docker-compose.yml -f docker-compose.observability.yml --profile observability config --quiet
       - run: docker compose --env-file .env.oci.example -f docker-compose.oci.yml -f docker-compose.observability.yml --profile observability config --quiet
       - name: Validate the production Caddy access gate
@@ -257,7 +257,7 @@ jobs:
       OCI_KNOWN_HOSTS: ${{ secrets.OCI_KNOWN_HOSTS }}
       OCI_DEPLOY_ROOT: ${{ vars.OCI_DEPLOY_ROOT }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
       - name: Configure verified SSH access
