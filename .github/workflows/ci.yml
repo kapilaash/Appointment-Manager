@@ -58,7 +58,7 @@ jobs:
       - run: echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - name: Audit pinned dependencies for known vulnerabilities
         run: |
-          uv export --frozen --extra dev --format requirements-txt --no-hashes > "$RUNNER_TEMP/requirements.txt"
+          uv export --frozen --extra dev --no-emit-project --format requirements-txt --no-hashes > "$RUNNER_TEMP/requirements.txt"
           uvx pip-audit --strict -r "$RUNNER_TEMP/requirements.txt"
       - run: ruff check app alembic tests
       - run: ruff format --check app alembic tests
