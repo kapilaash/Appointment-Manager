@@ -48,7 +48,7 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           version: "0.13.9"
           python-version: "3.12"
@@ -191,7 +191,7 @@ jobs:
       CORS_ORIGINS: '["http://127.0.0.1:5173"]'
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           version: "0.13.9"
           python-version: "3.12"
