@@ -163,7 +163,7 @@ services:
       - meta_prometheus_data:/prometheus
 
   alloy:
-    image: grafana/alloy:v1.21.3
+    image: grafana/alloy:v1.22.0
     profiles: ["observability"]
     restart: unless-stopped
     command:
