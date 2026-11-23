@@ -209,7 +209,8 @@ jobs:
         working-directory: frontend
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
-      - run: nohup python -m arq app.workers.main.WorkerSettings >/tmp/chess-worker.log 2>&1 &
+      # The Playwright backend listens on 8001, so move the worker's metrics endpoint aside.
+      - run: WORKER_METRICS_PORT=9101 nohup python -m arq app.workers.main.WorkerSettings >/tmp/chess-worker.log 2>&1 &
         working-directory: backend
       - run: npm run test:e2e
         working-directory: frontend

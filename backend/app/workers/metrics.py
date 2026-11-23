@@ -5,6 +5,8 @@ from typing import Any
 
 from prometheus_client import CollectorRegistry, Counter, Gauge, start_http_server
 
+from app.core.config import settings
+
 WORKER_METRICS = CollectorRegistry()
 WORKER_JOB_FAILURES = Counter(
     "worker_job_failures",
@@ -76,7 +78,9 @@ def set_worker_uptime_heartbeat_enabled(enabled: bool) -> None:
 
 
 async def start_worker_metrics(ctx: dict[str, Any]) -> None:
-    server, thread = start_http_server(8001, addr="0.0.0.0", registry=WORKER_METRICS)
+    server, thread = start_http_server(
+        settings.WORKER_METRICS_PORT, addr="0.0.0.0", registry=WORKER_METRICS
+    )
     ctx["worker_metrics_server"] = server
     ctx["worker_metrics_thread"] = thread
 

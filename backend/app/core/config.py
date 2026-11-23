@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     UPTIME_API_HEARTBEAT_URL: str = ""
     UPTIME_WORKER_HEARTBEAT_URL: str = ""
     UPTIME_HEARTBEAT_INTERVAL_SECONDS: int = Field(default=60, ge=15, le=3600)
+    # Port for the worker's Prometheus /metrics endpoint (Prometheus and the heartbeat scrape 8001).
+    WORKER_METRICS_PORT: int = Field(default=8001, ge=1, le=65535)
     # Daily housekeeping: how long finished background work and expired links are kept.
     OUTBOX_RETENTION_DAYS: int = Field(default=30, ge=1, le=3650)
     FAILED_OUTBOX_RETENTION_DAYS: int = Field(default=90, ge=1, le=3650)
