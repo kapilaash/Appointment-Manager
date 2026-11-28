@@ -1,5 +1,5 @@
 # uv installs exactly the versions pinned (with checksums) in uv.lock.
-FROM ghcr.io/astral-sh/uv:0.13.9 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.10 AS uv
 
 FROM python:3.12-slim
 
